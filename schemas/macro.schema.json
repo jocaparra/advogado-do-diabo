@@ -1,0 +1,64 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "macro",
+ "type": "object",
+ "required": [
+  "indicadores",
+  "figura_8_series",
+  "eventos_4_semanas"
+ ],
+ "properties": {
+  "indicadores": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "indicador",
+     "fonte"
+    ],
+    "properties": {
+     "indicador": {
+      "type": "string"
+     },
+     "fonte": {
+      "type": "string"
+     }
+    }
+   },
+   "minItems": 1
+  },
+  "figura_8_series": {
+   "type": "object",
+   "required": [
+    "periodo"
+   ],
+   "properties": {
+    "periodo": {
+     "type": "string",
+     "pattern": "^\\d{4}-\\d{2}-\\d{2} a \\d{4}-\\d{2}-\\d{2}$"
+    }
+   }
+  },
+  "eventos_4_semanas": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "data",
+     "evento"
+    ],
+    "properties": {
+     "data": {
+      "type": "string"
+     },
+     "evento": {
+      "type": "string"
+     },
+     "certeza": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

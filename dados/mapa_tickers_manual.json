@@ -1,0 +1,5 @@
+{
+ "_comentario": "Correções manuais do mapeamento ticker -> CNPJ quando a FCA da CVM não lista o ticker. Conferir o CNPJ em dados abertos da CVM antes de acrescentar.",
+ "BPAC11": {"cnpj": "30.306.294/0001-45", "nome": "BCO BTG PACTUAL S.A.", "valor_mobiliario": "Units", "segmento": "Nível 1",
+            "composicao_unit": "1 ação ordinária e 2 ações preferenciais", "fonte": "DFP 2025 da CVM (CNPJ) e prospecto das units"}
+}

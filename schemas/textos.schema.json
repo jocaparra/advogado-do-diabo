@@ -1,0 +1,42 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "textos",
+ "type": "object",
+ "required": [],
+ "properties": {
+  "parametros": {
+   "type": "object"
+  },
+  "resumo_executivo": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "rotulo",
+     "texto"
+    ],
+    "properties": {
+     "rotulo": {
+      "type": "string"
+     },
+     "texto": {
+      "type": "string",
+      "minLength": 5
+     }
+    }
+   }
+  },
+  "motivo_por_ticker": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "string"
+   }
+  },
+  "frases_figuras": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "string"
+   }
+  }
+ }
+}

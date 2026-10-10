@@ -1,0 +1,209 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "sintese",
+ "type": "object",
+ "required": [
+  "metodologia",
+  "ranking"
+ ],
+ "properties": {
+  "metodologia": {
+   "type": "object",
+   "required": [
+    "pesos"
+   ],
+   "properties": {
+    "pesos": {
+     "type": "object"
+    }
+   }
+  },
+  "ranking": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "posicao",
+     "ticker",
+     "setor",
+     "nota",
+     "componentes",
+     "acao_sugerida",
+     "certeza",
+     "preco_atual",
+     "data_cotacao",
+     "rating_xp",
+     "tese",
+     "pros",
+     "contras",
+     "riscos",
+     "fontes"
+    ],
+    "properties": {
+     "posicao": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "ticker": {
+      "type": "string",
+      "pattern": "^[A-Z]{4}\\d{1,2}$"
+     },
+     "setor": {
+      "type": "string"
+     },
+     "nota": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10
+     },
+     "componentes": {
+      "type": "object",
+      "required": [
+       "catalisadores",
+       "noticias",
+       "momentum",
+       "macro_eleicao",
+       "valuation_upside"
+      ],
+      "properties": {
+       "catalisadores": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 10
+       },
+       "noticias": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 10
+       },
+       "momentum": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 10
+       },
+       "macro_eleicao": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 10
+       },
+       "valuation_upside": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 10
+       }
+      }
+     },
+     "acao_sugerida": {
+      "type": "string",
+      "enum": [
+       "comprar",
+       "aguardar",
+       "evitar"
+      ]
+     },
+     "certeza": {
+      "type": "string",
+      "enum": [
+       "alta",
+       "média",
+       "baixa"
+      ]
+     },
+     "preco_atual": {
+      "type": "number",
+      "minimum": 0
+     },
+     "data_cotacao": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}"
+     },
+     "preco_alvo_xp": {
+      "type": [
+       "number",
+       "string"
+      ]
+     },
+     "upside_xp_pct": {
+      "type": [
+       "number",
+       "string"
+      ]
+     },
+     "mediana_casas": {
+      "type": [
+       "number",
+       "string"
+      ]
+     },
+     "upside_mediana_pct": {
+      "type": [
+       "number",
+       "string"
+      ]
+     },
+     "upside_ajustado_pct": {
+      "type": [
+       "number",
+       "string"
+      ]
+     },
+     "n_alvos_mediana": {
+      "type": [
+       "integer",
+       "number"
+      ]
+     },
+     "tese": {
+      "type": "string",
+      "minLength": 20
+     },
+     "pros": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "minItems": 1
+     },
+     "contras": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "minItems": 1
+     },
+     "riscos": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "minItems": 1
+     },
+     "fontes": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": [
+        "fonte",
+        "data"
+       ],
+       "properties": {
+        "fonte": {
+         "type": "string",
+         "minLength": 2
+        },
+        "data": {
+         "type": "string"
+        },
+        "url": {
+         "type": "string"
+        }
+       }
+      },
+      "minItems": 1
+     }
+    }
+   },
+   "minItems": 1
+  }
+ }
+}

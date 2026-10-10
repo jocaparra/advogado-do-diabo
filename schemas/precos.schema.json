@@ -1,0 +1,62 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "precos",
+ "type": "object",
+ "required": [
+  "ibovespa",
+  "acoes"
+ ],
+ "properties": {
+  "ibovespa": {
+   "type": "object",
+   "required": [
+    "preco_atual",
+    "data_cotacao",
+    "serie"
+   ],
+   "properties": {
+    "preco_atual": {
+     "type": "number"
+    },
+    "data_cotacao": {
+     "type": "string",
+     "pattern": "^\\d{4}-\\d{2}-\\d{2}"
+    },
+    "serie": {
+     "type": "array",
+     "items": {
+      "type": "array",
+      "minItems": 2
+     },
+     "minItems": 20
+    }
+   }
+  },
+  "acoes": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "object",
+    "required": [
+     "preco_atual",
+     "data_cotacao"
+    ],
+    "properties": {
+     "preco_atual": {
+      "type": "number",
+      "minimum": 0
+     },
+     "data_cotacao": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}"
+     },
+     "serie": {
+      "type": [
+       "array",
+       "string"
+      ]
+     }
+    }
+   }
+  }
+ }
+}

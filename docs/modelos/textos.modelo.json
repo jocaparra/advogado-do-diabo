@@ -1,0 +1,161 @@
+{
+ "_como_usar": "Modelo da camada editorial da semana. Copie para semana_AAAAMMDD/textos.json e preencha com conteúdo aprovado pela auditoria, sempre derivado dos dados e com fonte. Chaves de ticker (ex.: AAAA3) são exemplos.",
+ "parametros": {
+  "corte_compra": 5.8,
+  "min_casas_consenso": 3,
+  "top_n_risco": 5
+ },
+ "politica_fontes": {
+  "fontes_fora_da_contagem_de_casas": [
+   "<nome de veículo fora da lista permitida>"
+  ],
+  "casas_fora_da_contagem": [
+   "<casa a excluir da contagem>"
+  ],
+  "dominios_fora_da_lista_de_fontes": [
+   "<domínio>"
+  ]
+ },
+ "fonte_base": "<fontes principais; aceita {dados_xp}, {data}, {mes_xp}>",
+ "resumo_executivo": [
+  {
+   "rotulo": "Mercado",
+   "texto": "<resumo>"
+  },
+  {
+   "rotulo": "1",
+   "texto": "<conclusão principal>"
+  }
+ ],
+ "motivo_por_ticker": {
+  "AAAA3": "<motivo da posição, 1 frase>"
+ },
+ "ressalvas_por_ticker": {
+  "AAAA3": [
+   "<ressalva da auditoria>"
+  ]
+ },
+ "caixas_por_ticker": {
+  "AAAA3": {
+   "titulo": "<título>",
+   "texto": "<texto>"
+  }
+ },
+ "divergencia_texto_override": {},
+ "ressalvas_auditoria": [
+  [
+   "AAAA3",
+   "<item>",
+   "<ressalva>"
+  ]
+ ],
+ "auditoria": {
+  "veredito_final": "<texto>",
+  "rotulo_veredito": "<aprovado, aprovado com ressalvas ou reprovado>",
+  "seguem_reprovados": [
+   "<item>"
+  ]
+ },
+ "lacunas": {
+  "retirados": [
+   "<item retirado>"
+  ],
+  "nao_verificados": [
+   "<dado não verificado>"
+  ]
+ },
+ "diagnostico_acesso": {
+  "titulo_coluna": "Resultado do teste de acesso",
+  "linhas": [
+   [
+    "<fonte>",
+    "<resultado>"
+   ]
+  ],
+  "efeito": "<efeito>"
+ },
+ "fontes_extras": [
+  {
+   "nome": "<fonte>",
+   "url": "<link>",
+   "data": "<dd/mm/aaaa>"
+  }
+ ],
+ "notas_paginas": {
+  "ret_xp": "<nota; aceita {dados_xp}>",
+  "fig3": [
+   "<nota>"
+  ],
+  "fig4": "<nota>",
+  "alertas": "<critério>",
+  "catalisadores": "<texto>",
+  "objecoes_aceita_em_parte": []
+ },
+ "paginas": {
+  "ranking_rodape": "<texto; aceita {corte}>",
+  "fig3_como_ler": "<texto>",
+  "fig4_consenso": "<aceita {min_casas} e {com_consenso}>",
+  "risco": [
+   "<parágrafo>"
+  ],
+  "risco_cenarios": [
+   "<nome do cenário>"
+  ],
+  "upside_ajustado_metodo": "<texto>"
+ },
+ "figuras": {
+  "fig3": {
+   "nota": "<nota>"
+  },
+  "fig4": {
+   "nota": "<nota>"
+  },
+  "fig6": {
+   "posicoes_forcadas": {}
+  },
+  "fig7": {
+   "nota": "<nota>"
+  },
+  "fig8": {
+   "efeitos": {
+    "Selic meta": "<efeito>",
+    "Dólar PTAX venda": "<efeito>",
+    "Brent": "<efeito>",
+    "Ibovespa": "<efeito>",
+    "Treasury 10 anos": "<efeito>",
+    "fluxo": "<efeito>"
+   }
+  },
+  "fig10": {
+   "afeta": {
+    "AAAA-MM-DD": "<ações afetadas>"
+   },
+   "rotulos": {
+    "AAAA-MM-DD": "<rótulo do evento>"
+   },
+   "destaque_faixa": [
+    "AAAA-MM-DD",
+    2,
+    "<rótulo>"
+   ],
+   "sem_data": [
+    "<evento>"
+   ],
+   "fora_janela": [
+    "<evento>"
+   ]
+  }
+ },
+ "frases_figuras": {
+  "1": "<o que mostra e por que importa para a decisão>",
+  "2": "<o que mostra e por que importa para a decisão>",
+  "3": "<o que mostra e por que importa para a decisão>",
+  "4": "<o que mostra e por que importa para a decisão>",
+  "5": "<o que mostra e por que importa para a decisão>",
+  "6": "<o que mostra e por que importa para a decisão>",
+  "7": "<o que mostra e por que importa para a decisão>",
+  "8": "<o que mostra e por que importa para a decisão>",
+  "9": "<o que mostra e por que importa para a decisão>",
+  "10": "<o que mostra e por que importa para a decisão>"
+ }
+}

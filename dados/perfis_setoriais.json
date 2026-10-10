@@ -1,0 +1,576 @@
+{
+ "_comentario": "Perfis setoriais: o que importa em cada tipo de empresa. checklist = campos que o agente fundamentos preenche em dossie_qualitativo.json, cada um com fonte, data e certeza. g_curto = crescimento nominal anual dos lucros nos primeiros 5 anos do valuation; ciclica = usa o lucro médio de vários anos. São premissas do projeto, não previsões. Ticker fora de \"tickers\" usa o perfil generico.",
+ "perfis": {
+  "petroleo_producao": {
+   "nome": "Petróleo e gás (produtora independente)",
+   "ciclica": true,
+   "g_curto": 0.05,
+   "checklist": [
+    {
+     "id": "producao_boepd",
+     "rotulo": "Produção",
+     "unidade": "mil boe/d",
+     "orientacao": "Último trimestre divulgado e guidance do ano"
+    },
+    {
+     "id": "custo_extracao",
+     "rotulo": "Custo de extração (lifting cost)",
+     "unidade": "US$/boe",
+     "orientacao": "Último trimestre"
+    },
+    {
+     "id": "breakeven_brent",
+     "rotulo": "Breakeven do Brent",
+     "unidade": "US$/bbl",
+     "orientacao": "Brent em que o fluxo de caixa livre zera"
+    },
+    {
+     "id": "reservas_1p",
+     "rotulo": "Reservas provadas (1P)",
+     "unidade": "MMboe",
+     "orientacao": "Certificação mais recente"
+    },
+    {
+     "id": "sensibilidade_brent",
+     "rotulo": "Sensibilidade a variação de 10% do Brent",
+     "unidade": "texto",
+     "orientacao": "Efeito no EBITDA ou no caixa, com fonte"
+    }
+   ]
+  },
+  "petroleo_integrada": {
+   "nome": "Petróleo e gás (integrada)",
+   "ciclica": true,
+   "g_curto": 0.03,
+   "checklist": [
+    {
+     "id": "producao_boepd",
+     "rotulo": "Produção",
+     "unidade": "mil boe/d",
+     "orientacao": ""
+    },
+    {
+     "id": "politica_precos",
+     "rotulo": "Política de preços dos combustíveis",
+     "unidade": "texto",
+     "orientacao": "Regra vigente e mudanças recentes"
+    },
+    {
+     "id": "politica_dividendos",
+     "rotulo": "Política de dividendos e payout",
+     "unidade": "texto",
+     "orientacao": "Regra e valor do último provento"
+    },
+    {
+     "id": "capex_plano",
+     "rotulo": "Capex do plano de negócios",
+     "unidade": "US$ bi",
+     "orientacao": ""
+    },
+    {
+     "id": "breakeven_brent",
+     "rotulo": "Breakeven do Brent",
+     "unidade": "US$/bbl",
+     "orientacao": ""
+    }
+   ]
+  },
+  "mineracao": {
+   "nome": "Mineração",
+   "ciclica": true,
+   "g_curto": 0.03,
+   "checklist": [
+    {
+     "id": "preco_minerio",
+     "rotulo": "Preço do minério de ferro",
+     "unidade": "US$/t",
+     "orientacao": "Referência e data"
+    },
+    {
+     "id": "custo_c1",
+     "rotulo": "Custo caixa C1",
+     "unidade": "US$/t",
+     "orientacao": ""
+    },
+    {
+     "id": "volume_vendas",
+     "rotulo": "Volume vendido",
+     "unidade": "Mt",
+     "orientacao": ""
+    },
+    {
+     "id": "capex_plano",
+     "rotulo": "Capex do plano",
+     "unidade": "US$ bi",
+     "orientacao": ""
+    },
+    {
+     "id": "demanda_china",
+     "rotulo": "Leitura da demanda da China",
+     "unidade": "texto",
+     "orientacao": "Fonte e data"
+    }
+   ]
+  },
+  "siderurgia": {
+   "nome": "Siderurgia",
+   "ciclica": true,
+   "g_curto": 0.03,
+   "checklist": [
+    {
+     "id": "spread_aco",
+     "rotulo": "Spread do aço (preço menos custo)",
+     "unidade": "texto",
+     "orientacao": ""
+    },
+    {
+     "id": "volume_vendas",
+     "rotulo": "Volume vendido",
+     "unidade": "mil t",
+     "orientacao": ""
+    },
+    {
+     "id": "ebitda_por_tonelada",
+     "rotulo": "EBITDA por tonelada",
+     "unidade": "US$/t",
+     "orientacao": ""
+    },
+    {
+     "id": "importacoes",
+     "rotulo": "Pressão de importação e tarifas",
+     "unidade": "texto",
+     "orientacao": ""
+    },
+    {
+     "id": "capex_plano",
+     "rotulo": "Capex do plano",
+     "unidade": "R$ bi",
+     "orientacao": ""
+    }
+   ]
+  },
+  "saneamento": {
+   "nome": "Saneamento regulado",
+   "ciclica": false,
+   "g_curto": 0.07,
+   "checklist": [
+    {
+     "id": "reajuste_tarifario",
+     "rotulo": "Reajuste e revisão tarifária",
+     "unidade": "texto",
+     "orientacao": "Data e percentual, órgão regulador"
+    },
+    {
+     "id": "base_ativos_regulatoria",
+     "rotulo": "Base de ativos regulatória (RAB)",
+     "unidade": "R$ bi",
+     "orientacao": ""
+    },
+    {
+     "id": "capex_plano",
+     "rotulo": "Capex do plano",
+     "unidade": "R$ bi",
+     "orientacao": ""
+    },
+    {
+     "id": "metas_universalizacao",
+     "rotulo": "Metas de universalização e contrato",
+     "unidade": "texto",
+     "orientacao": ""
+    },
+    {
+     "id": "perdas_agua",
+     "rotulo": "Índice de perdas de água",
+     "unidade": "%",
+     "orientacao": ""
+    }
+   ]
+  },
+  "energia_eletrica": {
+   "nome": "Energia elétrica (geração e transmissão)",
+   "ciclica": false,
+   "g_curto": 0.05,
+   "checklist": [
+    {
+     "id": "geracao_gwh",
+     "rotulo": "Geração ou energia vendida",
+     "unidade": "GWh",
+     "orientacao": ""
+    },
+    {
+     "id": "preco_energia",
+     "rotulo": "Preço de energia (PLD ou contratos)",
+     "unidade": "R$/MWh",
+     "orientacao": ""
+    },
+    {
+     "id": "regulatorio",
+     "rotulo": "Concessões e risco regulatório",
+     "unidade": "texto",
+     "orientacao": ""
+    },
+    {
+     "id": "cronograma_divida",
+     "rotulo": "Vencimentos da dívida",
+     "unidade": "texto",
+     "orientacao": ""
+    },
+    {
+     "id": "capex_plano",
+     "rotulo": "Capex do plano",
+     "unidade": "R$ bi",
+     "orientacao": ""
+    }
+   ]
+  },
+  "banco": {
+   "nome": "Banco",
+   "ciclica": false,
+   "g_curto": 0.08,
+   "checklist": [
+    {
+     "id": "roe_recorrente",
+     "rotulo": "ROE recorrente",
+     "unidade": "%",
+     "orientacao": "Último trimestre, com fonte da empresa"
+    },
+    {
+     "id": "inadimplencia_90d",
+     "rotulo": "Inadimplência acima de 90 dias",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "capital_principal",
+     "rotulo": "Capital principal (CET1)",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "margem_financeira",
+     "rotulo": "Margem financeira",
+     "unidade": "R$ bi",
+     "orientacao": ""
+    },
+    {
+     "id": "eficiencia",
+     "rotulo": "Índice de eficiência",
+     "unidade": "%",
+     "orientacao": ""
+    }
+   ]
+  },
+  "banco_investimento": {
+   "nome": "Banco de investimento e gestão",
+   "ciclica": false,
+   "g_curto": 0.1,
+   "checklist": [
+    {
+     "id": "roe_recorrente",
+     "rotulo": "ROE recorrente",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "receita_por_linha",
+     "rotulo": "Receitas por linha de negócio",
+     "unidade": "texto",
+     "orientacao": ""
+    },
+    {
+     "id": "capital_basileia",
+     "rotulo": "Índice de Basileia",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "patrimonio_sob_gestao",
+     "rotulo": "Patrimônio sob gestão e custódia",
+     "unidade": "R$ bi",
+     "orientacao": ""
+    },
+    {
+     "id": "var_carteira",
+     "rotulo": "Risco de mercado (VaR)",
+     "unidade": "texto",
+     "orientacao": ""
+    }
+   ]
+  },
+  "shoppings": {
+   "nome": "Shopping centers e imóveis",
+   "ciclica": false,
+   "g_curto": 0.07,
+   "checklist": [
+    {
+     "id": "vendas_mesmas_lojas",
+     "rotulo": "Vendas mesmas lojas",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "taxa_ocupacao",
+     "rotulo": "Taxa de ocupação",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "noi",
+     "rotulo": "NOI",
+     "unidade": "R$ mi",
+     "orientacao": ""
+    },
+    {
+     "id": "divida_liquida_noi",
+     "rotulo": "Dívida líquida sobre NOI",
+     "unidade": "x",
+     "orientacao": ""
+    },
+    {
+     "id": "vacancia_alugueis",
+     "rotulo": "Inadimplência e vacância",
+     "unidade": "texto",
+     "orientacao": ""
+    }
+   ]
+  },
+  "incorporadora": {
+   "nome": "Incorporação residencial",
+   "ciclica": true,
+   "g_curto": 0.1,
+   "checklist": [
+    {
+     "id": "vgv_lancado",
+     "rotulo": "VGV lançado",
+     "unidade": "R$ bi",
+     "orientacao": ""
+    },
+    {
+     "id": "vendas_liquidas",
+     "rotulo": "Vendas líquidas",
+     "unidade": "R$ bi",
+     "orientacao": ""
+    },
+    {
+     "id": "margem_bruta",
+     "rotulo": "Margem bruta",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "distratos",
+     "rotulo": "Distratos sobre vendas brutas",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "landbank",
+     "rotulo": "Banco de terrenos (landbank)",
+     "unidade": "R$ bi",
+     "orientacao": ""
+    }
+   ]
+  },
+  "software": {
+   "nome": "Software e tecnologia",
+   "ciclica": false,
+   "g_curto": 0.12,
+   "checklist": [
+    {
+     "id": "receita_recorrente",
+     "rotulo": "Receita recorrente sobre a total",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "churn_retencao",
+     "rotulo": "Churn ou retenção líquida",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "margem_ebitda",
+     "rotulo": "Margem EBITDA ajustada",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "aquisicoes",
+     "rotulo": "Aquisições recentes",
+     "unidade": "texto",
+     "orientacao": ""
+    },
+    {
+     "id": "guidance",
+     "rotulo": "Guidance",
+     "unidade": "texto",
+     "orientacao": ""
+    }
+   ]
+  },
+  "saude_hospitalar": {
+   "nome": "Saúde (hospitais)",
+   "ciclica": false,
+   "g_curto": 0.1,
+   "checklist": [
+    {
+     "id": "leitos",
+     "rotulo": "Leitos operacionais",
+     "unidade": "unid.",
+     "orientacao": ""
+    },
+    {
+     "id": "ocupacao",
+     "rotulo": "Taxa de ocupação",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "ticket_medio",
+     "rotulo": "Ticket médio",
+     "unidade": "R$",
+     "orientacao": ""
+    },
+    {
+     "id": "margem_ebitda",
+     "rotulo": "Margem EBITDA",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "relacao_operadoras",
+     "rotulo": "Relação com operadoras (glosas e prazo)",
+     "unidade": "texto",
+     "orientacao": ""
+    }
+   ]
+  },
+  "aeroespacial": {
+   "nome": "Aeroespacial e defesa",
+   "ciclica": false,
+   "g_curto": 0.08,
+   "checklist": [
+    {
+     "id": "carteira_pedidos",
+     "rotulo": "Carteira de pedidos (backlog)",
+     "unidade": "US$ bi",
+     "orientacao": ""
+    },
+    {
+     "id": "entregas",
+     "rotulo": "Entregas no período",
+     "unidade": "unid.",
+     "orientacao": ""
+    },
+    {
+     "id": "fluxo_caixa_livre",
+     "rotulo": "Fluxo de caixa livre",
+     "unidade": "US$ mi",
+     "orientacao": ""
+    },
+    {
+     "id": "tarifas_eua",
+     "rotulo": "Efeito de tarifas e câmbio",
+     "unidade": "texto",
+     "orientacao": ""
+    },
+    {
+     "id": "guidance",
+     "rotulo": "Guidance do ano",
+     "unidade": "texto",
+     "orientacao": ""
+    }
+   ]
+  },
+  "fintech_digital": {
+   "nome": "Serviços financeiros digitais (BDR)",
+   "ciclica": false,
+   "g_curto": 0.15,
+   "checklist": [
+    {
+     "id": "clientes",
+     "rotulo": "Clientes ativos",
+     "unidade": "mi",
+     "orientacao": ""
+    },
+    {
+     "id": "receita_por_cliente",
+     "rotulo": "Receita média por cliente ativo",
+     "unidade": "US$",
+     "orientacao": ""
+    },
+    {
+     "id": "inadimplencia_90d",
+     "rotulo": "Inadimplência acima de 90 dias",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "lucro_liquido",
+     "rotulo": "Lucro líquido (demonstração do emissor)",
+     "unidade": "US$ mi",
+     "orientacao": ""
+    },
+    {
+     "id": "demonstracoes_emissor",
+     "rotulo": "Link das demonstrações do emissor",
+     "unidade": "texto",
+     "orientacao": ""
+    }
+   ]
+  },
+  "generico": {
+   "nome": "Genérico",
+   "ciclica": false,
+   "g_curto": 0.06,
+   "checklist": [
+    {
+     "id": "crescimento_receita",
+     "rotulo": "Crescimento de receita esperado",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "margem",
+     "rotulo": "Margem operacional",
+     "unidade": "%",
+     "orientacao": ""
+    },
+    {
+     "id": "alavancagem",
+     "rotulo": "Alavancagem",
+     "unidade": "x",
+     "orientacao": ""
+    },
+    {
+     "id": "governanca",
+     "rotulo": "Governança e controle",
+     "unidade": "texto",
+     "orientacao": ""
+    },
+    {
+     "id": "catalisadores",
+     "rotulo": "Catalisadores",
+     "unidade": "texto",
+     "orientacao": ""
+    }
+   ]
+  }
+ },
+ "tickers": {
+  "PRIO3": "petroleo_producao",
+  "PETR4": "petroleo_integrada",
+  "VALE3": "mineracao",
+  "GGBR4": "siderurgia",
+  "SBSP3": "saneamento",
+  "AXIA3": "energia_eletrica",
+  "ITUB4": "banco",
+  "BPAC11": "banco_investimento",
+  "IGTI11": "shoppings",
+  "CURY3": "incorporadora",
+  "TOTS3": "software",
+  "RDOR3": "saude_hospitalar",
+  "EMBJ3": "aeroespacial",
+  "ROXO34": "fintech_digital"
+ }
+}

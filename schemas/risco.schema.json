@@ -1,0 +1,29 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "risco",
+ "type": "object",
+ "required": [
+  "tabela_por_ticker"
+ ],
+ "properties": {
+  "tabela_por_ticker": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "object",
+    "required": [
+     "vol_90pregoes_anual_pct",
+     "beta_90pregoes_ibov"
+    ],
+    "properties": {
+     "vol_90pregoes_anual_pct": {
+      "type": "number",
+      "minimum": 0
+     },
+     "beta_90pregoes_ibov": {
+      "type": "number"
+     }
+    }
+   }
+  }
+ }
+}

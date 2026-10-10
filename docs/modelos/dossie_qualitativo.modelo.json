@@ -1,0 +1,12 @@
+{
+ "_como_usar": "Modelo de dossie_qualitativo.json: {TICKER: {id_do_item: {...}}}. Os ids válidos estão em dados/perfis_setoriais.json (checklist do perfil do ticker). Item sem fonte e data não deve ser incluído.",
+ "AAAA3": {
+  "<id_do_item>": {
+   "valor": "<valor com unidade>",
+   "fonte": "<veículo ou documento>",
+   "url": "<link>",
+   "data": "AAAA-MM-DD",
+   "certeza": "alta | média | baixa"
+  }
+ }
+}

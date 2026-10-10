@@ -1,0 +1,17 @@
+# ambiente e lixo do sistema
+.venv/
+.cache/
+__pycache__/
+*.pyc
+.DS_Store
+
+# execuções locais (dados e relatórios de cada semana não são versionados)
+/exemplo/
+/semana_*/
+/xp_mensal/
+/historico_carteira.json
+/entrada/
+
+# configuração local do Claude Code (mantém só os agentes)
+.claude/*
+!.claude/agents/

@@ -1,0 +1,88 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "casas",
+ "type": "object",
+ "required": [
+  "tickers"
+ ],
+ "properties": {
+  "tickers": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "object",
+    "required": [
+     "casas"
+    ],
+    "properties": {
+     "casas": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": [
+        "casa",
+        "rating",
+        "data",
+        "fonte",
+        "situacao"
+       ],
+       "properties": {
+        "casa": {
+         "type": "string",
+         "minLength": 2
+        },
+        "rating": {
+         "type": "string",
+         "enum": [
+          "compra",
+          "neutro",
+          "venda",
+          "não verificado"
+         ]
+        },
+        "preco_alvo": {
+         "type": [
+          "number",
+          "string",
+          "null"
+         ]
+        },
+        "moeda": {
+         "type": "string"
+        },
+        "data": {
+         "type": "string"
+        },
+        "fonte": {
+         "type": "string",
+         "minLength": 2
+        },
+        "url": {
+         "type": "string"
+        },
+        "situacao": {
+         "type": "string"
+        },
+        "contar_no_consenso": {
+         "type": "boolean"
+        }
+       }
+      }
+     },
+     "mediana_preco_alvo": {
+      "type": [
+       "number",
+       "string",
+       "null"
+      ]
+     },
+     "n_alvos_mediana": {
+      "type": [
+       "integer",
+       "null"
+      ]
+     }
+    }
+   }
+  }
+ }
+}

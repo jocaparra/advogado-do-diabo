@@ -1,0 +1,39 @@
+{
+ "_comentario": "Premissas do valuation simplificado (lucros descontados, com reinvestimento implícito pelo ROE). São do projeto e não previsões: altere aqui para testar outras hipóteses. Taxas nominais em R$.",
+ "horizonte_anos": 5,
+ "roe_minimo": 0.04,
+ "roe_maximo": 0.35,
+ "fracao_max_crescimento_sobre_roe": 0.9,
+ "cenarios": {
+  "bear": {
+   "ke": 0.17,
+   "g_terminal": 0.035,
+   "delta_g_curto": -0.03,
+   "fator_lucro": 0.85
+  },
+  "base": {
+   "ke": 0.15,
+   "g_terminal": 0.05,
+   "delta_g_curto": 0.0,
+   "fator_lucro": 1.0
+  },
+  "bull": {
+   "ke": 0.13,
+   "g_terminal": 0.06,
+   "delta_g_curto": 0.02,
+   "fator_lucro": 1.1
+  }
+ },
+ "grade": {
+  "ke": [
+   0.13,
+   0.15,
+   0.17
+  ],
+  "g_terminal": [
+   0.03,
+   0.05,
+   0.07
+  ]
+ }
+}

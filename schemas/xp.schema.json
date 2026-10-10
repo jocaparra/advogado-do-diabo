@@ -1,0 +1,115 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "xp",
+ "type": "object",
+ "required": [
+  "data_relatorio",
+  "dados_ate",
+  "acoes",
+  "carteira",
+  "setores"
+ ],
+ "properties": {
+  "data_relatorio": {
+   "type": "string",
+   "pattern": "^\\d{4}-\\d{2}-\\d{2}"
+  },
+  "dados_ate": {
+   "type": "string",
+   "pattern": "^\\d{4}-\\d{2}-\\d{2}"
+  },
+  "fonte": {
+   "type": "string"
+  },
+  "acoes": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "ticker",
+     "empresa",
+     "setor",
+     "peso_atual",
+     "rating"
+    ],
+    "properties": {
+     "ticker": {
+      "type": "string",
+      "pattern": "^[A-Z]{4}\\d{1,2}$"
+     },
+     "empresa": {
+      "type": "string"
+     },
+     "setor": {
+      "type": "string"
+     },
+     "peso_atual": {
+      "type": [
+       "number",
+       "string"
+      ]
+     },
+     "peso_anterior": {
+      "type": [
+       "number",
+       "string",
+       "null"
+      ]
+     },
+     "rating": {
+      "type": "string"
+     },
+     "preco_alvo": {
+      "type": [
+       "number",
+       "string",
+       "null"
+      ]
+     }
+    }
+   },
+   "minItems": 1
+  },
+  "carteira": {
+   "type": "object",
+   "required": [
+    "retornos",
+    "indicadores"
+   ],
+   "properties": {
+    "retornos": {
+     "type": "object"
+    },
+    "indicadores": {
+     "type": "object"
+    }
+   }
+  },
+  "setores": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "setor",
+     "peso_ibovespa",
+     "peso_carteira"
+    ],
+    "properties": {
+     "setor": {
+      "type": "string"
+     },
+     "peso_ibovespa": {
+      "type": "number"
+     },
+     "peso_carteira": {
+      "type": "number"
+     }
+    }
+   },
+   "minItems": 1
+  },
+  "mudancas_mes": {
+   "type": "string"
+  }
+ }
+}

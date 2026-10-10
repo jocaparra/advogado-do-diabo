@@ -1,0 +1,42 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "alertas",
+ "type": "object",
+ "required": [
+  "alertas"
+ ],
+ "properties": {
+  "alertas": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "ticker",
+     "nivel",
+     "fato",
+     "data"
+    ],
+    "properties": {
+     "ticker": {
+      "type": "string"
+     },
+     "nivel": {
+      "type": "string",
+      "enum": [
+       "vermelho",
+       "amarelo",
+       "verde"
+      ]
+     },
+     "fato": {
+      "type": "string",
+      "minLength": 10
+     },
+     "data": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}
