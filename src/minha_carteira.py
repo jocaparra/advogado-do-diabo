@@ -186,6 +186,7 @@ def cruzar(posicoes, ranking, pesos_xp=None):
     return {
         'valor_total': round(total, 2),
         'n_posicoes': len(linhas),
+        'sem_preco': sem_preco,
         'cobertura_ranking_pct': cobertura,
         'fora_do_ranking': [l['ticker'] for l in linhas if not l['no_ranking']],
         'peso_por_acao_modelo_pct': por_acao,
@@ -215,6 +216,9 @@ def md(res, data_semana):
          'ignora seu perfil, objetivos e impostos. Veja o aviso legal do projeto.', '',
          f"Valor total: **{_brl(res['valor_total'])}** em {res['n_posicoes']} posições. "
          f"Cobertura do ranking: **{_pct(res['cobertura_ranking_pct'])}** da carteira."]
+    if res.get('sem_preco'):
+        o.append(f"Atenção: {len(res['sem_preco'])} posição(ões) sem preço ({', '.join(res['sem_preco'])}) ficaram "
+                 'fora do valor total e dos percentuais; informe `preco_atual` ou `preco_medio` no CSV.')
     if res['nota_media_ponderada'] is not None:
         o.append(f"Nota média ponderada (só ações do ranking): **{str(res['nota_media_ponderada']).replace('.', ',')}**.")
     if res['alertas']:

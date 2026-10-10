@@ -78,6 +78,8 @@ class TesteCruzamento(unittest.TestCase):
         self.assertEqual(r['valor_total'], 0)
         self.assertIsNone(r['posicoes'][0]['peso_pct'])
         self.assertTrue(any('Sem preço' in a for a in r['alertas']))
+        self.assertEqual(r['sem_preco'], ['XXXX3'])
+        self.assertIn('fora do valor total', M.md(r, '2026-10-05'))
         self.assertIn('Minha carteira', M.md(r, '2026-10-05'))
 
 
