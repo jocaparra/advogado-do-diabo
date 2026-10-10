@@ -306,6 +306,28 @@ def _semana_recente():
     return os.path.dirname(achadas[0]) if achadas else None
 
 
+AJUDA_FONTE = """Não encontrei suas posições ({caminho}).
+
+Escolha um caminho:
+
+  A) Arquivo com suas ações (mais rápido). Crie minhas_acoes.csv assim:
+
+         ticker;quantidade
+         PRIO3;10
+         ITUB4;5
+
+     e rode:  npx advogado-do-diabo@latest --csv minhas_acoes.csv
+
+  B) Direto da corretora (MeuPluggy, grátis, feito uma vez):
+     1. meu.pluggy.ai            conecte sua corretora pelo Open Finance
+     2. dashboard.pluggy.ai      crie uma aplicação e copie Client ID e Client Secret
+     3. Demo da aplicação        conecte pelo MeuPluggy e copie o Item ID
+     4. export PLUGGY_CLIENT_ID=...  PLUGGY_CLIENT_SECRET=...  PLUGGY_ITEM_IDS=...
+        npx advogado-do-diabo@latest
+
+Detalhes: https://github.com/jocaparra/advogado-do-diabo#cruze-com-a-sua-carteira-5-minutos"""
+
+
 def _ler_csv(caminho):
     """Texto do CSV: UTF-8 (com ou sem BOM) ou, se falhar, Windows-1252 (Excel em português)."""
     with open(caminho, 'rb') as f:
@@ -357,8 +379,7 @@ def main():
     if a.csv or (not a.pluggy and not tem_env):
         caminho = os.path.abspath(a.csv or 'entrada/posicoes.csv')
         if not os.path.isfile(caminho):
-            sys.exit(f'CSV não encontrado: {caminho}\n'
-                     'Informe --csv ARQUIVO, use --pluggy, ou crie entrada/posicoes.csv (veja docs/MINHA_CARTEIRA.md).')
+            sys.exit(AJUDA_FONTE.format(caminho=caminho))
         posicoes = M_ler(_ler_csv(caminho))
     else:
         posicoes = _posicoes_pluggy()

@@ -83,6 +83,13 @@ class TesteCruzamento(unittest.TestCase):
         self.assertIn('Minha carteira', M.md(r, '2026-10-05'))
 
 
+class TesteAjuda(unittest.TestCase):
+    def test_mensagem_de_ajuda_formata(self):
+        txt = M.AJUDA_FONTE.format(caminho='/x/entrada/posicoes.csv')
+        self.assertIn('--csv minhas_acoes.csv', txt)
+        self.assertIn('PLUGGY_ITEM_IDS', txt)
+
+
 class TestePublico(unittest.TestCase):
     def test_exporta_so_campos_publicos_e_recarrega(self):
         with tempfile.TemporaryDirectory() as d:

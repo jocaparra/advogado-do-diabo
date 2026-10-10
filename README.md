@@ -35,11 +35,68 @@ nas fontes e, se for investir, converse com um profissional habilitado.
 - **Comparação com a XP, as casas de análise e o Ibovespa**, e a medição do próprio desempenho
   das recomendações passadas (com aviso quando a amostra é pequena).
 
-## Cruze com a sua carteira
+## Cruze com a sua carteira (5 minutos)
 
-Um comando lê suas posições (CSV ou MeuPluggy/Open Finance) e mostra como o modelo classificou o
-que você já tem: `npx advogado-do-diabo@latest --csv minhas_posicoes.csv`. Roda na sua máquina, sem enviar nada a ninguém:
-veja [docs/MINHA_CARTEIRA.md](docs/MINHA_CARTEIRA.md).
+Quer saber o que o modelo acha **das ações que você já tem**? Um comando mostra, para cada uma,
+a nota, a classificação do modelo e o quanto sua carteira está concentrada. Roda na sua máquina:
+nada seu é enviado ao projeto.
+
+Você precisa do [Node.js](https://nodejs.org) e do [Python 3.9+](https://www.python.org/downloads/)
+instalados. Escolha um caminho.
+
+### Caminho A: digitar suas ações (mais rápido, sem conta em lugar nenhum)
+
+1. Crie um arquivo `minhas_acoes.csv` com uma linha por ação (quantidade que você tem):
+
+   ```
+   ticker;quantidade
+   PRIO3;10
+   ITUB4;5
+   ```
+
+   Dica: se tiver FIIs ou ativos que o modelo não cobre, acrescente a coluna `preco_atual`
+   (`BTLG11;3;102,40`) para eles entrarem no valor total.
+
+2. No terminal, na pasta onde salvou o arquivo:
+
+   ```bash
+   npx advogado-do-diabo@latest --csv minhas_acoes.csv
+   ```
+
+### Caminho B: puxar da corretora (Open Finance, grátis)
+
+Feito **uma vez**; depois é um comando só. Usa o MeuPluggy, em que você mesmo autoriza a leitura:
+
+1. **Conecte sua corretora.** Em [meu.pluggy.ai](https://meu.pluggy.ai), crie a conta e conecte a
+   corretora ou o banco pelo Open Finance.
+2. **Crie suas chaves.** Em [dashboard.pluggy.ai](https://dashboard.pluggy.ai), aba *Applications*,
+   crie uma aplicação e copie o **Client ID** e o **Client Secret** (são seus; não compartilhe).
+3. **Pegue o ID da conexão.** Na aplicação, abra a *Demo*, conecte pelo conector **MeuPluggy** e,
+   no menu de três pontos, copie o **Item ID**.
+4. **Rode:**
+
+   ```bash
+   export PLUGGY_CLIENT_ID="cole-aqui"
+   export PLUGGY_CLIENT_SECRET="cole-aqui"
+   export PLUGGY_ITEM_IDS="cole-aqui"
+   npx advogado-do-diabo@latest
+   ```
+
+   (No Windows PowerShell, use `$env:PLUGGY_CLIENT_ID="..."` no lugar de `export`.)
+
+A leitura é somente leitura: não move dinheiro nem altera nada. As variáveis valem só naquela
+janela do terminal e não ficam gravadas. Limites: até 5 conexões por pessoa, sem garantia de
+funcionamento (plano gratuito); confira as condições em [pluggy.ai/pricing](https://pluggy.ai/pricing).
+
+### O que você vê
+
+Valor total, quanto cada ação pesa, nota e classificação do modelo (comprar, aguardar, evitar),
+pontos de concentração por ação e por setor, e o que a carteira da XP tem e a sua não. Nada é
+gravado na sua pasta; use `--salvar relatorio.md` se quiser guardar.
+
+> É a classificação de um modelo, **não** recomendação de investimento: ignora seu perfil,
+> seus objetivos e seus impostos. Leia o [aviso legal](docs/AVISO_LEGAL.md). Mais detalhes em
+> [docs/MINHA_CARTEIRA.md](docs/MINHA_CARTEIRA.md).
 
 ## O que você precisa
 
