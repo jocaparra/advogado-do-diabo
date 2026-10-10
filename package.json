@@ -1,0 +1,33 @@
+{
+  "name": "advogado-do-diabo",
+  "version": "0.1.1",
+  "description": "Cruza a sua carteira (MeuPluggy/Open Finance ou CSV) com o ranking semanal do advogado-do-diabo. Roda local; não é recomendação de investimento.",
+  "bin": {
+    "advogado-do-diabo": "bin/advogado-do-diabo.js"
+  },
+  "files": [
+    "bin/advogado-do-diabo.js",
+    "src/carteira.py",
+    "src/minha_carteira.py",
+    "src/pluggy_posicoes.py",
+    "docs/AVISO_LEGAL.md",
+    "docs/MINHA_CARTEIRA.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jocaparra/advogado-do-diabo.git"
+  },
+  "keywords": [
+    "open-finance",
+    "pluggy",
+    "b3",
+    "carteira",
+    "investimentos",
+    "cli"
+  ]
+}

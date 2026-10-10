@@ -1,0 +1,176 @@
+{
+  "data": "2026-10-05",
+  "aviso": "Classificação de um modelo, não recomendação de investimento.",
+  "ranking": [
+    {
+      "posicao": 1,
+      "ticker": "PRIO3",
+      "setor": "Energia",
+      "nota": 5.93,
+      "acao_sugerida": "comprar",
+      "certeza": "baixa",
+      "preco_atual": 64.15,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": 13.1
+    },
+    {
+      "posicao": 2,
+      "ticker": "IGTI11",
+      "setor": "Imobiliário",
+      "nota": 5.73,
+      "acao_sugerida": "aguardar",
+      "certeza": "média",
+      "preco_atual": 30.76,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": 2.9
+    },
+    {
+      "posicao": 3,
+      "ticker": "PETR4",
+      "setor": "Energia",
+      "nota": 5.62,
+      "acao_sugerida": "aguardar",
+      "certeza": "média",
+      "preco_atual": 55.36,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": 7.0
+    },
+    {
+      "posicao": 4,
+      "ticker": "TOTS3",
+      "setor": "Tecnologia da Informação",
+      "nota": 5.6,
+      "acao_sugerida": "aguardar",
+      "certeza": "baixa",
+      "preco_atual": 36.82,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": 34.3
+    },
+    {
+      "posicao": 5,
+      "ticker": "EMBJ3",
+      "setor": "Bens Industriais",
+      "nota": 5.55,
+      "acao_sugerida": "aguardar",
+      "certeza": "média",
+      "preco_atual": 95.0,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": 27.4
+    },
+    {
+      "posicao": 6,
+      "ticker": "SBSP3",
+      "setor": "Utilidade Pública",
+      "nota": 5.35,
+      "acao_sugerida": "aguardar",
+      "certeza": "média",
+      "preco_atual": 31.5,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": 3.6
+    },
+    {
+      "posicao": 7,
+      "ticker": "CURY3",
+      "setor": "Imobiliário",
+      "nota": 5.15,
+      "acao_sugerida": "aguardar",
+      "certeza": "baixa",
+      "preco_atual": 30.04,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": 42.0
+    },
+    {
+      "posicao": 8,
+      "ticker": "AXIA3",
+      "setor": "Utilidade Pública",
+      "nota": 4.95,
+      "acao_sugerida": "aguardar",
+      "certeza": "baixa",
+      "preco_atual": 61.38,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": -0.4
+    },
+    {
+      "posicao": 9,
+      "ticker": "ITUB4",
+      "setor": "Financeiro",
+      "nota": 4.9,
+      "acao_sugerida": "aguardar",
+      "certeza": "média",
+      "preco_atual": 49.48,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": -7.2
+    },
+    {
+      "posicao": 10,
+      "ticker": "GGBR4",
+      "setor": "Materiais",
+      "nota": 4.9,
+      "acao_sugerida": "aguardar",
+      "certeza": "baixa",
+      "preco_atual": 25.79,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": 14.9
+    },
+    {
+      "posicao": 11,
+      "ticker": "BPAC11",
+      "setor": "Financeiro",
+      "nota": 4.75,
+      "acao_sugerida": "aguardar",
+      "certeza": "média",
+      "preco_atual": 80.89,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": -37.1
+    },
+    {
+      "posicao": 12,
+      "ticker": "RDOR3",
+      "setor": "Saúde",
+      "nota": 4.7,
+      "acao_sugerida": "aguardar",
+      "certeza": "média",
+      "preco_atual": 43.73,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": -5.5
+    },
+    {
+      "posicao": 13,
+      "ticker": "ROXO34",
+      "setor": "Financeiro",
+      "nota": 4.7,
+      "acao_sugerida": "aguardar",
+      "certeza": "baixa",
+      "preco_atual": 12.6,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": 38.2
+    },
+    {
+      "posicao": 14,
+      "ticker": "VALE3",
+      "setor": "Materiais",
+      "nota": 3.25,
+      "acao_sugerida": "evitar",
+      "certeza": "média",
+      "preco_atual": 71.4,
+      "data_cotacao": "2026-10-05",
+      "upside_ajustado_pct": 23.1
+    }
+  ],
+  "pesos_xp": {
+    "AXIA3": 7.5,
+    "BPAC11": 10.0,
+    "CURY3": 5.0,
+    "EMBJ3": 10.0,
+    "GGBR4": 5.0,
+    "IGTI11": 10.0,
+    "ITUB4": 7.5,
+    "PETR4": 10.0,
+    "PRIO3": 5.0,
+    "RDOR3": 5.0,
+    "ROXO34": 5.0,
+    "SBSP3": 10.0,
+    "TOTS3": 5.0,
+    "VALE3": 5.0
+  }
+}

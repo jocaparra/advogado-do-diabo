@@ -35,6 +35,12 @@ nas fontes e, se for investir, converse com um profissional habilitado.
 - **Comparação com a XP, as casas de análise e o Ibovespa**, e a medição do próprio desempenho
   das recomendações passadas (com aviso quando a amostra é pequena).
 
+## Cruze com a sua carteira
+
+Um comando lê suas posições (CSV ou MeuPluggy/Open Finance) e mostra como o modelo classificou o
+que você já tem: `npx advogado-do-diabo@latest --csv minhas_posicoes.csv`. Roda na sua máquina, sem enviar nada a ninguém:
+veja [docs/MINHA_CARTEIRA.md](docs/MINHA_CARTEIRA.md).
+
 ## O que você precisa
 
 | Quero | Preciso de |

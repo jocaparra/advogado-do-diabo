@@ -1,0 +1,134 @@
+"""Baixa suas posições de renda variável pela API da Pluggy (conector MeuPluggy) e grava um CSV.
+
+uso: python src/pluggy_posicoes.py [saida.csv]        (padrão: entrada/posicoes_pluggy.csv)
+
+Variáveis de ambiente (nunca coloque no código nem no git):
+    PLUGGY_CLIENT_ID       credencial da sua aplicação em dashboard.pluggy.ai
+    PLUGGY_CLIENT_SECRET   idem
+    PLUGGY_ITEM_IDS        itemId(s) das suas conexões, separados por vírgula
+
+O CSV gerado entra direto em:  python src/minha_carteira.py <pasta_da_semana> <saida.csv>
+
+Só stdlib. A chave de API da Pluggy vale poucas horas e é pedida a cada execução. Somente leitura:
+nenhuma chamada move dinheiro nem altera conexões.
+"""
+import json
+import os
+import re
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+
+API = 'https://api.pluggy.ai'
+
+
+class PluggyErro(Exception):
+    """Falha ao falar com a Pluggy; a mensagem é segura para mostrar ao usuário."""
+
+
+TIPOS_ACAO = {'EQUITY', 'ETF'}
+TICKER = re.compile(r'[A-Z]{4}\d{1,2}F?')
+
+
+def _chamar(metodo, caminho, chave=None, corpo=None, consulta=None):
+    url = API + caminho + ('?' + urllib.parse.urlencode(consulta) if consulta else '')
+    cab = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+    if chave:
+        cab['X-API-KEY'] = chave
+    req = urllib.request.Request(url, method=metodo, headers=cab,
+                                 data=json.dumps(corpo).encode() if corpo is not None else None)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        # o corpo da resposta da Pluggy não contém credenciais; é seguro mostrar o status e a mensagem
+        raise PluggyErro(f'Pluggy respondeu {e.code} em {caminho}: {e.read().decode(errors="replace")[:300]}')
+    except (urllib.error.URLError, OSError) as e:      # inclui timeout
+        raise PluggyErro(f'sem conexão com a Pluggy: {getattr(e, "reason", e)}')
+    except ValueError:
+        raise PluggyErro(f'resposta inesperada da Pluggy em {caminho}')
+
+
+def autenticar(client_id, client_secret):
+    return _chamar('POST', '/auth', corpo={'clientId': client_id, 'clientSecret': client_secret})['apiKey']
+
+
+def investimentos(chave, item_id):
+    """Todas as páginas de /investments de um item."""
+    pagina, saida = 1, []
+    while True:
+        r = _chamar('GET', '/investments', chave, consulta={'itemId': item_id, 'page': pagina, 'pageSize': 500})
+        saida += r.get('results', [])
+        if pagina >= r.get('totalPages', 1):
+            return saida
+        pagina += 1
+
+
+def extrair_acoes(invs):
+    """Filtra ações/ETFs com código de ticker e soma por ticker. Devolve (posicoes, ignorados).
+
+    O campo `code` da Pluggy traz o ticker nas posições de bolsa; o que não parecer ticker
+    (renda fixa, fundos, COE) vai para `ignorados` com o motivo, para você ver o que ficou de fora.
+    """
+    por_tk, valor_tk, ignorados = {}, {}, []
+    for i in invs:
+        tipo, nome = i.get('type'), i.get('name') or i.get('code') or '?'
+        codigo = str(i.get('code') or '').strip().upper()
+        if tipo not in TIPOS_ACAO:
+            ignorados.append(f'{nome} ({tipo or "tipo n/d"})')
+        elif not TICKER.fullmatch(codigo):
+            ignorados.append(f'{nome} (código {codigo or "vazio"} não parece ticker)')
+        elif not i.get('quantity'):
+            ignorados.append(f'{codigo} (sem quantidade)')
+        else:
+            tk = codigo[:-1] if codigo.endswith('F') else codigo
+            q = float(i['quantity'])
+            por_tk[tk] = por_tk.get(tk, 0) + q
+            valor_tk[tk] = valor_tk.get(tk, 0) + q * float(i.get('value') or 0)
+    return [{'ticker': t, 'quantidade': q,
+             'preco_atual': round(valor_tk[t] / q, 4) if valor_tk[t] else None}
+            for t, q in sorted(por_tk.items())], ignorados
+
+
+def csv_texto(posicoes):
+    linhas = ['ticker;quantidade;preco_medio;preco_atual']
+    for p in posicoes:
+        q = f"{p['quantidade']:.6f}".rstrip('0').rstrip('.')
+        pa = f"{p['preco_atual']:.4f}".replace('.', ',') if p.get('preco_atual') else ''
+        linhas.append(f"{p['ticker']};{q.replace('.', ',')};;{pa}")
+    return '\n'.join(linhas) + '\n'
+
+
+def baixar(client_id, client_secret, item_ids):
+    """Autentica, lê todos os itens e devolve (posicoes, ignorados). Levanta PluggyErro."""
+    chave = autenticar(client_id, client_secret)
+    todos = []
+    for it in item_ids:
+        todos += investimentos(chave, it)
+    return extrair_acoes(todos)
+
+
+def main():
+    cid, sec = os.environ.get('PLUGGY_CLIENT_ID'), os.environ.get('PLUGGY_CLIENT_SECRET')
+    itens = [x.strip() for x in os.environ.get('PLUGGY_ITEM_IDS', '').split(',') if x.strip()]
+    falta = [n for n, v in (('PLUGGY_CLIENT_ID', cid), ('PLUGGY_CLIENT_SECRET', sec), ('PLUGGY_ITEM_IDS', itens)) if not v]
+    if falta:
+        sys.exit('faltam variáveis de ambiente: ' + ', '.join(falta) + ' (veja o topo de src/pluggy_posicoes.py)')
+    saida = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else 'entrada/posicoes_pluggy.csv')
+    try:
+        posicoes, ignorados = baixar(cid, sec, itens)
+    except PluggyErro as e:
+        sys.exit(str(e))
+    os.makedirs(os.path.dirname(saida), exist_ok=True)
+    with open(saida, 'w', encoding='utf-8') as f:
+        f.write(csv_texto(posicoes))
+    print(f'ok: {len(posicoes)} ações/ETFs de {len(itens)} conexão(ões) -> {saida}')
+    if ignorados:
+        print('não incluídos (conferir se algum deveria):')
+        for g in ignorados:
+            print('  -', g)
+
+
+if __name__ == '__main__':
+    main()

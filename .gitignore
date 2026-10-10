@@ -16,3 +16,10 @@ __pycache__/
 .claude/*
 !.claude/agents/
 !.claude/commands/
+
+# dados pessoais e credenciais (carteira própria, chaves da Pluggy): nunca versionar
+.env
+.env.*
+*.env
+/minha_carteira.*
+/posicoes*.csv
