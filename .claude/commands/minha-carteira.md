@@ -13,7 +13,9 @@ Depois de ler a saída (e `minha_carteira.json`, se precisar do detalhe), respon
    alvos "comprar" ausentes) e os pontos de concentração sinalizados.
 3. O que o relatório da semana (`sintese.json`: divergências, riscos, lacunas) diz sobre as
    posições de maior peso, citando apenas o que está lá.
-4. Itens fora do ranking ou sem preço: liste, sem opinar sobre eles.
+4. Se houver a seção "Seu plano", relacione os achados ao horizonte, à queda tolerada e aos
+   limites que a pessoa informou (nota no horizonte, risco, concentração), sem prescrever ações.
+5. Itens fora do ranking ou sem preço: liste, sem opinar sobre eles.
 
 Regras: isto é uma leitura da classificação do modelo, **não recomendação de investimento
 personalizada**; não diga "compre", "venda" nem "reduza", descreva o que o modelo indica e as

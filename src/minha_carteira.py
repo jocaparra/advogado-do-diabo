@@ -1,7 +1,7 @@
 """Cruza as posições de uma carteira pessoal com o ranking da semana. Um comando só.
 
 uso: python src/minha_carteira.py [--semana PASTA | --ranking ARQUIVO_OU_URL] [--csv ARQUIVO | --pluggy] [--salvar ARQUIVO]
-       python src/minha_carteira.py --configurar | --esquecer
+       python src/minha_carteira.py --configurar | --plano | --esquecer
 
 Fonte das posições (nesta ordem, se nada for indicado):
     1. --csv ARQUIVO              CSV com ticker;quantidade[;preco_medio][;preco_atual]
@@ -9,6 +9,10 @@ Fonte das posições (nesta ordem, se nada for indicado):
        definidas (MeuPluggy / Open Finance, somente leitura; veja src/pluggy_posicoes.py)
     3. a configuração salva por --configurar (feita uma vez; vale nas próximas execuções)
     4. entrada/posicoes.csv
+
+Plano (opcional): --plano pergunta horizonte, objetivo, queda tolerada e limites de concentração
+e salva em ~/.config/advogado-do-diabo/plano.json; com ele, o relatório reavalia a carteira no seu
+prazo e contra a sua tolerância. --sem-plano ignora o plano numa execução.
 
 --configurar guarda Client ID, Client Secret e Item ID(s) em ~/.config/advogado-do-diabo/config.json
 (permissão só do seu usuário, fora de qualquer repositório); --esquecer apaga esse arquivo.
@@ -41,6 +45,7 @@ import unicodedata
 import urllib.request
 
 import carteira as C
+import plano as PL
 
 ALIAS = {
     'ticker': {'ticker', 'ativo', 'codigo', 'papel', 'simbolo'},
@@ -123,8 +128,14 @@ def ler_posicoes(texto):
             for tk, a in agg.items()]
 
 
-def cruzar(posicoes, ranking, pesos_xp=None):
-    """Junta posições ao ranking. Devolve o dicionário que vira minha_carteira.json."""
+def cruzar(posicoes, ranking, pesos_xp=None, plano=None):
+    """Junta posições ao ranking. Devolve o dicionário que vira minha_carteira.json.
+
+    `plano` (de plano.ler_plano) troca os limites de concentração e acrescenta a leitura por
+    horizonte e o risco contra a tolerância.
+    """
+    lim_ativo = plano['limite_ativo_pct'] if plano else LIMITE_ATIVO_PCT
+    lim_setor = plano['limite_setor_pct'] if plano else LIMITE_SETOR_PCT
     por_tk = {r['ticker']: r for r in ranking}
     pesos_xp = pesos_xp or {}
     linhas, sem_preco = [], []
@@ -151,7 +162,11 @@ def cruzar(posicoes, ranking, pesos_xp=None):
             'certeza': r.get('certeza') if r else None,
             'upside_ajustado_pct': r.get('upside_ajustado_pct') if r else None,
             'peso_xp_pct': pesos_xp.get(p['ticker']),
+            'vol_anual_pct': r.get('vol_90pregoes_anual_pct') if r else None,
+            'valuation_margem_pct': r.get('valuation_margem_pct') if r else None,
         }
+        if plano and r:
+            linha['nota_horizonte'] = PL.nota_no_horizonte(r.get('componentes'), plano['horizonte'], r.get('nota'))
         if preco is not None and p['preco_medio']:
             linha['resultado_vs_preco_medio_pct'] = round((preco / p['preco_medio'] - 1) * 100, 1)
         linhas.append(linha)
@@ -178,18 +193,26 @@ def cruzar(posicoes, ranking, pesos_xp=None):
 
     alertas = []
     for l in linhas:
-        if (l['peso_pct'] or 0) > LIMITE_ATIVO_PCT:
-            alertas.append(f"{l['ticker']} é {_pct(l['peso_pct'])} da carteira (limite de atenção: {LIMITE_ATIVO_PCT:.0f}%).")
+        if (l['peso_pct'] or 0) > lim_ativo:
+            alertas.append(f"{l['ticker']} é {_pct(l['peso_pct'])} da carteira (limite {'seu' if plano else 'de atenção'}: {lim_ativo:.0f}%).")
     for s, v in por_setor.items():
-        if v > LIMITE_SETOR_PCT:
-            alertas.append(f'Setor {s} soma {_pct(v)} da carteira (limite de atenção: {LIMITE_SETOR_PCT:.0f}%).')
+        if v > lim_setor:
+            alertas.append(f"Setor {s} soma {_pct(v)} da carteira (limite {'seu' if plano else 'de atenção'}: {lim_setor:.0f}%).")
     if cobertura < LIMITE_COBERTURA_PCT:
         alertas.append(f'Só {_pct(cobertura)} da carteira está entre as ações analisadas; o cruzamento cobre pouco.')
     if sem_preco:
         alertas.append('Sem preço (fora do ranking e sem preço médio), ficaram de fora dos pesos: ' + ', '.join(sem_preco) + '.')
 
     xp_ausentes = sorted(tk for tk in pesos_xp if tk not in {l['ticker'] for l in linhas})
-    return {
+    res_plano = None
+    if plano:
+        com_nota = [l for l in linhas if l.get('nota_horizonte') is not None]
+        res_plano = {
+            **plano,
+            'risco': PL.risco_vs_tolerancia(linhas, plano['horizonte'], plano['queda_max_pct']),
+            'ordem_no_horizonte': [l['ticker'] for l in sorted(com_nota, key=lambda l: -l['nota_horizonte'])],
+        }
+    resultado = {
         'valor_total': round(total, 2),
         'n_posicoes': len(linhas),
         'sem_preco': sem_preco,
@@ -205,6 +228,9 @@ def cruzar(posicoes, ranking, pesos_xp=None):
         'carteira_xp_sem_posicao': xp_ausentes,
         'posicoes': linhas,
     }
+    if res_plano:
+        resultado['plano'] = res_plano
+    return resultado
 
 
 def _brl(v):
@@ -213,6 +239,49 @@ def _brl(v):
 
 def _pct(v):
     return 'n/d' if v is None else f'{v:.1f}%'.replace('.', ',')
+
+
+def _secao_plano(res):
+    p = res['plano']
+    h = PL.horizontes()[p['horizonte']]
+    o = ['', f"## Seu plano: {p['horizonte']} ({h['descricao']}), objetivo {p['objetivo']}", '',
+         f"Seus limites: até {p['limite_ativo_pct']:.0f}% em uma ação, {p['limite_setor_pct']:.0f}% em um setor; "
+         f"queda tolerada de {p['queda_max_pct']:.0f}%."]
+    r = p.get('risco')
+    if r:
+        o += ['', f"- **Risco:** volatilidade anual estimada de {_pct(r['vol_anual_pct'])} (limite superior: supõe que as "
+                  f"ações caem juntas; cobre {_pct(r['cobertura_peso_pct'])} da carteira). Um movimento de 1 desvio-padrão "
+                  f"no prazo do seu plano é de cerca de {_pct(r['movimento_1dp_pct'])}, "
+                  + ('**acima** da queda que você tolera.' if r['acima_da_tolerancia'] else 'dentro da queda que você tolera.')]
+    else:
+        o += ['', '- **Risco:** o ranking usado não traz volatilidade; atualize para a versão mais recente.']
+    if p['objetivo'] == 'renda':
+        o.append('- O modelo não mede dividendos nem renda; a nota não responde ao seu objetivo de renda.')
+    if p['horizonte'] != 'semanas':
+        com = [l for l in res['posicoes'] if l.get('nota_horizonte') is not None]
+        if com:
+            ordem = {tk: i for i, tk in enumerate(p['ordem_no_horizonte'], 1)}
+            o += ['', 'Nota recalculada com pesos para o seu horizonte (premissa do projeto, não validada):', '',
+                  '| Ticker | Nota semanal | Nota no seu horizonte | Diferença | Ordem na sua carteira |',
+                  '|---|---:|---:|---:|---:|']
+            for l in sorted(com, key=lambda l: ordem[l['ticker']]):
+                dif = l['nota_horizonte'] - l['nota']
+                o.append(f"| {l['ticker']} | {l['nota']:.2f} | {l['nota_horizonte']:.2f} | {dif:+.2f} | {ordem[l['ticker']]} |".replace('.', ','))
+        else:
+            o.append('- O ranking usado não traz os componentes da nota; atualize para a versão mais recente.')
+    if p['horizonte'] == 'anos':
+        o += ['', '> Em prazos de anos a evidência do modelo semanal é fraca: a nota foi calibrada para semanas. '
+                  'Prefira os cenários de valuation abaixo e os dossiês de cada ação.']
+        val = [l for l in res['posicoes'] if l.get('valuation_margem_pct')]
+        if val:
+            o += ['', 'Margem do valor justo sobre o preço (negativa = valor justo abaixo do preço):', '',
+                  '| Ticker | Bear | Base | Bull |', '|---|---:|---:|---:|']
+            for l in val:
+                m = l['valuation_margem_pct']
+                o.append(f"| {l['ticker']} | {_pct(m.get('bear'))} | {_pct(m.get('base'))} | {_pct(m.get('bull'))} |")
+        else:
+            o.append('- Cenários de valuation indisponíveis neste ranking.')
+    return o
 
 
 def md(res, data_semana):
@@ -238,6 +307,8 @@ def md(res, data_semana):
             l['posicao_ranking'] or '-', str(l['nota']).replace('.', ',') if l['nota'] is not None else '-',
             l['acao_modelo'] or '-', l['certeza'] or '-', _pct(l['upside_ajustado_pct']) if l['upside_ajustado_pct'] is not None else '-',
             _pct(l['peso_xp_pct']) if l['peso_xp_pct'] is not None else '-'))
+    if res.get('plano'):
+        o += _secao_plano(res)
     if res['peso_por_acao_modelo_pct']:
         o += ['', '## Por classificação do modelo', ''] + [f'- {k}: {_pct(v)}' for k, v in res['peso_por_acao_modelo_pct'].items()]
     if res['peso_por_setor_pct']:
@@ -248,6 +319,30 @@ def md(res, data_semana):
     return '\n'.join(o)
 
 
+def _enriquecer(ranking, pasta):
+    """Acrescenta a cada ação a volatilidade e o beta (risco.json) e a margem do valuation
+    (dossie.json), quando esses arquivos existem na pasta da semana."""
+    risco = C.ler(os.path.join(pasta, 'risco.json'), {}).get('tabela_por_ticker', {})
+    dossie = C.ler(os.path.join(pasta, 'dossie.json'), {}).get('tickers', [])
+    if isinstance(dossie, dict):
+        dossie = list(dossie.values())
+    margens = {}
+    for d in dossie:
+        v = d.get('valuation') or {}
+        if v.get('status') == 'ok' and isinstance(v.get('cenarios'), dict):
+            margens[d.get('ticker')] = {k: round(c['margem_pct'], 1) for k, c in v['cenarios'].items()
+                                        if isinstance(c.get('margem_pct'), (int, float))}
+    saida = []
+    for r in ranking:
+        r = dict(r)
+        rk = risco.get(r.get('ticker'), {})
+        r['vol_90pregoes_anual_pct'] = rk.get('vol_90pregoes_anual_pct')
+        r['beta_ibov_multifator'] = rk.get('beta_ibov_multifator')
+        r['valuation_margem_pct'] = margens.get(r.get('ticker'))
+        saida.append(r)
+    return saida
+
+
 def carregar_semana(pasta):
     """(ranking, pesos_xp, data) da pasta da semana, sem rede."""
     sintese = C.ler(os.path.join(pasta, 'sintese.json'))
@@ -256,7 +351,7 @@ def carregar_semana(pasta):
         pesos_xp = {a['ticker']: a.get('peso_atual') for a in xp.get('acoes', [])}
     except (FileNotFoundError, SystemExit):
         pesos_xp = {}
-    return sintese['ranking'], pesos_xp, sintese.get('data', '')
+    return _enriquecer(sintese['ranking'], pasta), pesos_xp, sintese.get('data', '')
 
 
 RANKING_URL = 'https://raw.githubusercontent.com/jocaparra/advogado-do-diabo/main/publico/ranking.json'
@@ -290,13 +385,14 @@ def carregar_publico(origem):
 
 
 CAMPOS_PUBLICOS = ('posicao', 'ticker', 'setor', 'nota', 'acao_sugerida', 'certeza', 'preco_atual',
-                   'data_cotacao', 'upside_ajustado_pct')
+                   'data_cotacao', 'upside_ajustado_pct', 'componentes', 'vol_90pregoes_anual_pct',
+                   'beta_ibov_multifator', 'valuation_margem_pct')
 
 
 def exportar_publico(pasta):
     """ranking.json enxuto da semana: só o que o cruzamento usa, sem preços-alvo da XP nem textos."""
     ranking, pesos_xp, data = carregar_semana(pasta)
-    return {'data': data,
+    return {'versao': 2, 'data': data,
             'aviso': 'Classificação de um modelo, não recomendação de investimento.',
             'ranking': [{k: r.get(k) for k in CAMPOS_PUBLICOS} for r in ranking],
             'pesos_xp': pesos_xp}
@@ -363,16 +459,8 @@ def ler_config():
 
 def salvar_config(client_id, client_secret, item_ids):
     """Grava com permissão 0600 (só o dono lê), criando a pasta com 0700."""
-    caminho = caminho_config()
-    os.makedirs(os.path.dirname(caminho), mode=0o700, exist_ok=True)
-    fd = os.open(caminho, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, 'w', encoding='utf-8') as f:
-        json.dump({'client_id': client_id, 'client_secret': client_secret, 'item_ids': item_ids}, f)
-    try:
-        os.chmod(caminho, 0o600)
-    except OSError:
-        pass
-    return caminho
+    return PL.gravar_privado(caminho_config(), {'client_id': client_id, 'client_secret': client_secret,
+                                                'item_ids': item_ids})
 
 
 def _credenciais():
@@ -410,6 +498,17 @@ def configurar():
           'Para apagar:  npx advogado-do-diabo@latest --esquecer')
 
 
+def definir_plano():
+    print('Seu plano (feito uma vez; fica só nesta máquina). Enter aceita o valor entre colchetes.')
+    try:
+        plano = PL.assistente()
+    except (EOFError, KeyboardInterrupt):
+        sys.exit('\ncancelado; nada foi salvo.')
+    caminho = PL.salvar_plano(plano)
+    print(f'\nok: plano salvo em {caminho}\n'
+          'Daqui em diante o relatório mostra a seção "Seu plano". Para ignorar numa execução: --sem-plano.')
+
+
 def esquecer():
     caminho = caminho_config()
     try:
@@ -417,6 +516,8 @@ def esquecer():
         print(f'configuração apagada: {caminho}')
     except FileNotFoundError:
         print('não havia configuração salva.')
+    if PL.apagar_plano():
+        print(f'plano apagado: {PL.caminho_plano()}')
 
 
 def _posicoes_pluggy():
@@ -447,7 +548,9 @@ def main():
     ap.add_argument('--ranking', help='ranking publicado: arquivo .json ou URL https')
     ap.add_argument('--salvar', help='grava o relatório (.md) neste arquivo (modo ranking publicado)')
     ap.add_argument('--configurar', action='store_true', help='salva suas chaves do MeuPluggy (uma vez)')
-    ap.add_argument('--esquecer', action='store_true', help='apaga a configuração salva')
+    ap.add_argument('--esquecer', action='store_true', help='apaga a configuração e o plano salvos')
+    ap.add_argument('--plano', action='store_true', help='define seu plano (horizonte, tolerância, limites) e salva')
+    ap.add_argument('--sem-plano', action='store_true', help='ignora o plano salvo nesta execução')
     fonte = ap.add_mutually_exclusive_group()
     fonte.add_argument('--csv', help='CSV de posições')
     fonte.add_argument('--pluggy', action='store_true', help='ler posições do MeuPluggy (variáveis PLUGGY_*)')
@@ -456,6 +559,8 @@ def main():
         return configurar()
     if a.esquecer:
         return esquecer()
+    if a.plano:
+        return definir_plano()
 
     if a.semana and a.ranking:
         sys.exit('use --semana ou --ranking, não os dois')
@@ -473,7 +578,8 @@ def main():
         ranking, pesos_xp, data = carregar_semana(pasta)
     else:
         ranking, pesos_xp, data = carregar_publico(a.ranking or RANKING_URL)
-    res = cruzar(posicoes, ranking, pesos_xp)
+    plano = None if a.sem_plano else PL.ler_plano()
+    res = cruzar(posicoes, ranking, pesos_xp, plano)
     res['semana'] = data
     texto = md(res, data)
     print(texto)

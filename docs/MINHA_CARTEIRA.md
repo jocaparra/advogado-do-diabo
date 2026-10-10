@@ -80,6 +80,27 @@ Cuidados: o Client Secret dá acesso de leitura aos seus dados; não o compartil
 em arquivo versionado. O período de teste do dashboard pode limitar a criação de novas
 conexões; confirme as condições atuais em [pluggy.ai/pricing](https://pluggy.ai/pricing).
 
+## Seu plano
+
+```bash
+python src/minha_carteira.py --plano     # ou: npx advogado-do-diabo@latest --plano
+```
+
+Perguntas: horizonte (semanas, meses, anos), objetivo (crescimento, renda, preservação), queda
+máxima tolerada, limite por ação e por setor. Fica em `~/.config/advogado-do-diabo/plano.json`
+(permissão 0600). Com o plano salvo o relatório:
+
+- **recalcula a nota** com os pesos do seu horizonte (`dados/horizontes.json`; premissa do
+  projeto, não validada) e mostra a ordem entre as suas ações;
+- compara a **volatilidade da carteira** (limite superior, média ponderada) com a queda que você
+  tolera, escalada pelo prazo (vol x raiz do prazo, 1 desvio-padrão);
+- usa **os seus limites** de concentração, no lugar dos padrões (25% por ação, 40% por setor);
+- em `anos`, avisa que a evidência do modelo semanal é fraca e mostra as margens dos cenários de
+  valuation (bear, base, bull), quando o ranking publicado as traz.
+
+Não indica o que comprar, vender nem quanto aportar. O modelo não mede dividendos, então o
+objetivo "renda" não altera a nota (o relatório avisa).
+
 ## De onde vem o ranking
 
 - **Quem só usa:** o comando baixa `publico/ranking.json` do repositório, publicado por quem

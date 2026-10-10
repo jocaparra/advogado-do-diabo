@@ -97,7 +97,26 @@ pessoa, sem garantia de funcionamento (plano gratuito); o consentimento do Open 
 pode precisar ser renovado no MeuPluggy. Confira as condições em
 [pluggy.ai/pricing](https://pluggy.ai/pricing).
 
-### O que você vê
+### Seu plano (opcional)
+
+Informe uma vez por quanto tempo pretende manter as ações (semanas, meses ou anos), seu objetivo,
+quanto de queda tolera e seus limites de concentração:
+
+```bash
+npx advogado-do-diabo@latest --plano
+```
+
+Cinco perguntas curtas, salvas só na sua máquina. Daí em diante o relatório ganha a seção
+**"Seu plano"**: a nota recalculada para o seu horizonte, o risco da carteira contra a queda que
+você tolera e a concentração contra os seus limites. `--sem-plano` ignora o plano numa execução;
+`--esquecer` apaga tudo o que foi salvo.
+
+A nota do ranking é de **semanas**. Para meses e anos, o projeto reajusta os pesos dos mesmos
+componentes (mais valuation, menos notícias e momentum); essa conversão é uma premissa do projeto,
+**não validada**, e fica em [dados/horizontes.json](dados/horizontes.json). Em prazos de anos a
+evidência é fraca: use os cenários de valuation do relatório e os dossiês.
+
+
 
 Valor total, quanto cada ação pesa, nota e classificação do modelo (comprar, aguardar, evitar),
 pontos de concentração por ação e por setor, e o que a carteira da XP tem e a sua não. Nada é

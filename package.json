@@ -1,7 +1,7 @@
 {
   "name": "advogado-do-diabo",
-  "version": "0.1.1",
-  "description": "Cruza a sua carteira (MeuPluggy/Open Finance ou CSV) com o ranking semanal do advogado-do-diabo. Roda local; não é recomendação de investimento.",
+  "version": "0.2.0",
+  "description": "Cruza a sua carteira (MeuPluggy/Open Finance ou CSV) com o ranking semanal do advogado-do-diabo e com o seu plano (horizonte, tolerância). Roda local; não é recomendação de investimento.",
   "bin": {
     "advogado-do-diabo": "bin/advogado-do-diabo.js"
   },
@@ -9,7 +9,9 @@
     "bin/advogado-do-diabo.js",
     "src/carteira.py",
     "src/minha_carteira.py",
+    "src/plano.py",
     "src/pluggy_posicoes.py",
+    "dados/horizontes.json",
     "docs/AVISO_LEGAL.md",
     "docs/MINHA_CARTEIRA.md",
     "LICENSE"

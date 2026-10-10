@@ -1,0 +1,38 @@
+{
+ "_comentario": "Pesos dos 5 componentes da nota por horizonte do plano do usuário. PREMISSA DO PROJETO, NÃO VALIDADA: 'semanas' reproduz a metodologia atual do ranking (sintese.json, metodologia.pesos); 'meses' e 'anos' deslocam peso para valuation_upside porque catalisadores, notícias e momentum perdem poder preditivo em prazos longos. Cada linha soma 1. Altere aqui para testar outras hipóteses; janela_anos é o prazo usado para escalar a volatilidade (vol x raiz do prazo).",
+ "horizontes": {
+  "semanas": {
+   "descricao": "até cerca de 1 mês",
+   "janela_anos": 0.0769,
+   "pesos": {
+    "catalisadores": 0.25,
+    "noticias": 0.20,
+    "momentum": 0.20,
+    "macro_eleicao": 0.20,
+    "valuation_upside": 0.15
+   }
+  },
+  "meses": {
+   "descricao": "de 1 a 12 meses",
+   "janela_anos": 0.5,
+   "pesos": {
+    "catalisadores": 0.20,
+    "noticias": 0.10,
+    "momentum": 0.10,
+    "macro_eleicao": 0.20,
+    "valuation_upside": 0.40
+   }
+  },
+  "anos": {
+   "descricao": "mais de 1 ano",
+   "janela_anos": 1.0,
+   "pesos": {
+    "catalisadores": 0.15,
+    "noticias": 0.05,
+    "momentum": 0.05,
+    "macro_eleicao": 0.15,
+    "valuation_upside": 0.60
+   }
+  }
+ }
+}

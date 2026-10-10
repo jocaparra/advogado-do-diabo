@@ -87,8 +87,10 @@ class TesteConfig(unittest.TestCase):
     def setUp(self):
         self.d = tempfile.TemporaryDirectory()
         self.antes = {k: os.environ.get(k) for k in
-                      ('ADVOGADO_DO_DIABO_CONFIG', 'PLUGGY_CLIENT_ID', 'PLUGGY_CLIENT_SECRET', 'PLUGGY_ITEM_IDS')}
+                      ('ADVOGADO_DO_DIABO_CONFIG', 'ADVOGADO_DO_DIABO_PLANO',
+                       'PLUGGY_CLIENT_ID', 'PLUGGY_CLIENT_SECRET', 'PLUGGY_ITEM_IDS')}
         os.environ['ADVOGADO_DO_DIABO_CONFIG'] = os.path.join(self.d.name, 'sub', 'config.json')
+        os.environ['ADVOGADO_DO_DIABO_PLANO'] = os.path.join(self.d.name, 'sub', 'plano.json')
         for k in ('PLUGGY_CLIENT_ID', 'PLUGGY_CLIENT_SECRET', 'PLUGGY_ITEM_IDS'):
             os.environ.pop(k, None)
 

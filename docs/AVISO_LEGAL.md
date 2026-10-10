@@ -24,3 +24,10 @@
 7. **Regulação.** Quem publicar relatórios derivados deste projeto para terceiros deve verificar a
    regulamentação aplicável à divulgação de análises de valores mobiliários no seu país (no Brasil,
    a da CVM). Este repositório não presta esse serviço.
+
+## Plano do usuário
+
+A leitura "no seu horizonte" usa pesos definidos pelo projeto (`dados/horizontes.json`), sem
+validação estatística. Ela reordena a nota semanal do modelo; não é recomendação personalizada,
+não considera seu patrimônio total, impostos, liquidez ou objetivos além dos informados, e pode
+estar errada. Prazos de anos estão fora do que o modelo semanal foi desenhado para medir.
