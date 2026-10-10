@@ -38,6 +38,7 @@ import getpass
 import glob
 import io
 import json
+import math
 import os
 import re
 import sys
@@ -50,8 +51,8 @@ import plano as PL
 ALIAS = {
     'ticker': {'ticker', 'ativo', 'codigo', 'papel', 'simbolo'},
     'quantidade': {'quantidade', 'qtd', 'qtde', 'quant'},
-    'preco_medio': {'preco_medio', 'pm', 'preco medio', 'preco_medio_r', 'custo_medio'},
-    'preco_atual': {'preco_atual', 'preco atual', 'cotacao', 'preco'},
+    'preco_medio': {'preco medio', 'pm', 'preco medio r', 'custo medio', 'pm r'},
+    'preco_atual': {'preco atual', 'cotacao', 'preco', 'ultimo preco'},
 }
 LIMITE_ATIVO_PCT = 25.0     # uma posição acima disso é sinalizada
 LIMITE_SETOR_PCT = 40.0     # um setor acima disso é sinalizado
@@ -60,27 +61,38 @@ LIMITE_COBERTURA_PCT = 50.0  # abaixo disso, o cruzamento cobre pouco da carteir
 
 def _norm(s):
     s = unicodedata.normalize('NFKD', str(s)).encode('ascii', 'ignore').decode()
-    return re.sub(r'\s+', ' ', s.strip().lower())
+    s = re.sub(r'[^\w\s]', ' ', s.lower()).replace('_', ' ')
+    return re.sub(r'\s+', ' ', s).strip()
 
 
-def _num(txt):
-    """'1.234,56' -> 1234.56; '1.000' -> 1000; '42.10' -> 42.1; vazio -> None."""
+def _num(txt, virgula_milhar=False):
+    """'1.234,56' -> 1234.56; '1.000' -> 1000; '42.10' -> 42.1; vazio -> None.
+
+    virgula_milhar=True (arquivo separado por vírgula): '1,000' é mil, não um.
+    """
     t = str(txt).strip().replace('R$', '').replace(' ', '')
     if not t:
         return None
-    if ',' in t:
+    if virgula_milhar and re.fullmatch(r'\d{1,3}(,\d{3})+(\.\d+)?', t):
+        t = t.replace(',', '')
+    elif ',' in t:
         t = t.replace('.', '').replace(',', '.')
     elif re.fullmatch(r'\d{1,3}(\.\d{3})+', t):   # "1.000" no Brasil é mil
         t = t.replace('.', '')
     try:
-        return float(t)
+        v = float(t)
     except ValueError:
         raise ValueError(f'número inválido: {txt!r}')
+    if not math.isfinite(v):
+        raise ValueError(f'número inválido: {txt!r}')
+    return v
 
 
 def _ticker(t):
     """'petr4f' -> 'PETR4' (lote fracionário vira o papel do lote padrão)."""
     t = str(t).strip().upper()
+    if t.endswith('.SA'):
+        t = t[:-3]
     m = re.fullmatch(r'([A-Z]{4}\d{1,2})F', t)
     return m.group(1) if m else t
 
@@ -88,7 +100,8 @@ def _ticker(t):
 def ler_posicoes(texto):
     """Lê o CSV e soma linhas repetidas do mesmo ticker (preço médio ponderado pela quantidade)."""
     amostra = texto[:2048]
-    sep = ';' if amostra.count(';') >= amostra.count(',') else ','
+    cont = {sep: amostra.count(sep) for sep in (';', '\t', ',')}
+    sep = max(cont, key=lambda k: (cont[k], k == ';'))   # empate favorece ';'
     leitor = csv.reader(io.StringIO(texto.lstrip('﻿')), delimiter=sep)
     linhas = [l for l in leitor if any(c.strip() for c in l)]
     if not linhas:
@@ -106,11 +119,14 @@ def ler_posicoes(texto):
     agg = {}
     for n, l in enumerate(linhas[1:], start=2):
         try:
+            if max(idx['ticker'], idx['quantidade']) >= len(l):
+                raise ValueError('faltam colunas (ticker ou quantidade)')
+            vm = sep == ','
             tk = _ticker(l[idx['ticker']])
-            q = _num(l[idx['quantidade']])
-            pm = _num(l[idx['preco_medio']]) if 'preco_medio' in idx and idx['preco_medio'] < len(l) else None
-            pa = _num(l[idx['preco_atual']]) if 'preco_atual' in idx and idx['preco_atual'] < len(l) else None
-        except (ValueError, IndexError) as e:
+            q = _num(l[idx['quantidade']], vm)
+            pm = _num(l[idx['preco_medio']], vm) if 'preco_medio' in idx and idx['preco_medio'] < len(l) else None
+            pa = _num(l[idx['preco_atual']], vm) if 'preco_atual' in idx and idx['preco_atual'] < len(l) else None
+        except ValueError as e:
             raise ValueError(f'linha {n}: {e}')
         if not tk or q is None or q <= 0:
             continue
@@ -128,6 +144,15 @@ def ler_posicoes(texto):
             for tk, a in agg.items()]
 
 
+def _f(x):
+    """Número finito ou None (texto, nan e inf viram None)."""
+    try:
+        v = float(str(x).replace(',', '.')) if isinstance(x, str) else float(x)
+    except (TypeError, ValueError):
+        return None
+    return v if math.isfinite(v) else None
+
+
 def cruzar(posicoes, ranking, pesos_xp=None, plano=None):
     """Junta posições ao ranking. Devolve o dicionário que vira minha_carteira.json.
 
@@ -136,8 +161,14 @@ def cruzar(posicoes, ranking, pesos_xp=None, plano=None):
     """
     lim_ativo = plano['limite_ativo_pct'] if plano else LIMITE_ATIVO_PCT
     lim_setor = plano['limite_setor_pct'] if plano else LIMITE_SETOR_PCT
-    por_tk = {r['ticker']: r for r in ranking}
-    pesos_xp = pesos_xp or {}
+    por_tk = {}
+    for r in ranking if isinstance(ranking, list) else []:
+        if isinstance(r, dict) and isinstance(r.get('ticker'), str):
+            r = dict(r)
+            for k in ('nota', 'preco_atual', 'upside_ajustado_pct', 'vol_90pregoes_anual_pct'):
+                r[k] = _f(r.get(k))
+            por_tk.setdefault(r['ticker'].strip().upper(), r)
+    pesos_xp = pesos_xp if isinstance(pesos_xp, dict) else {}
     linhas, sem_preco = [], []
     for p in posicoes:
         r = por_tk.get(p['ticker'])
@@ -381,7 +412,8 @@ def carregar_publico(origem):
             sys.exit(f'não consegui ler o ranking: {e}')
     if not isinstance(dados, dict) or not isinstance(dados.get('ranking'), list):
         sys.exit('ranking.json inválido: falta a lista "ranking"')
-    return dados['ranking'], dados.get('pesos_xp', {}), dados.get('data', '')
+    pesos = dados.get('pesos_xp')
+    return dados['ranking'], (pesos if isinstance(pesos, dict) else {}), str(dados.get('data') or '')
 
 
 CAMPOS_PUBLICOS = ('posicao', 'ticker', 'setor', 'nota', 'acao_sugerida', 'certeza', 'preco_atual',
@@ -568,6 +600,8 @@ def main():
     tem_pluggy = _credenciais()[3] is not None
     if a.csv or (not a.pluggy and not tem_pluggy):
         caminho = os.path.abspath(a.csv or 'entrada/posicoes.csv')
+        if os.path.isdir(caminho):
+            sys.exit(f'{caminho} é uma pasta; informe o arquivo CSV com --csv.')
         if not os.path.isfile(caminho):
             sys.exit(AJUDA_FONTE.format(caminho=caminho))
         posicoes = M_ler(_ler_csv(caminho))
@@ -575,7 +609,11 @@ def main():
         posicoes = _posicoes_pluggy()
 
     if pasta:
-        ranking, pesos_xp, data = carregar_semana(pasta)
+        try:
+            ranking, pesos_xp, data = carregar_semana(pasta)
+        except (OSError, ValueError, KeyError) as e:
+            sys.exit(f'não consegui ler a análise de {pasta}: {e}\n'
+                     'A pasta precisa ter sintese.json (gerado por /semana). Use --ranking para um ranking publicado.')
     else:
         ranking, pesos_xp, data = carregar_publico(a.ranking or RANKING_URL)
     plano = None if a.sem_plano else PL.ler_plano()
@@ -583,16 +621,19 @@ def main():
     res['semana'] = data
     texto = md(res, data)
     print(texto)
-    if pasta:
-        with open(os.path.join(pasta, 'minha_carteira.json'), 'w', encoding='utf-8') as f:
-            json.dump(res, f, ensure_ascii=False, indent=2)
-        destino = os.path.join(pasta, 'minha_carteira.md')
-    else:
-        destino = os.path.abspath(a.salvar) if a.salvar else None
-    if destino:
-        with open(destino, 'w', encoding='utf-8') as f:
-            f.write(texto)
-        print(f'(salvo em {destino})')
+    try:
+        if pasta:
+            with open(os.path.join(pasta, 'minha_carteira.json'), 'w', encoding='utf-8') as f:
+                json.dump(res, f, ensure_ascii=False, indent=2)
+            destino = os.path.join(pasta, 'minha_carteira.md')
+        else:
+            destino = os.path.abspath(a.salvar) if a.salvar else None
+        if destino:
+            with open(destino, 'w', encoding='utf-8') as f:
+                f.write(texto)
+            print(f'(salvo em {destino})')
+    except OSError as e:
+        sys.exit(f'o relatório foi impresso, mas não consegui salvar: {e}')
 
 
 if __name__ == '__main__':

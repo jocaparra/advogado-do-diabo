@@ -27,7 +27,12 @@ def caminho_plano():
 def gravar_privado(caminho, dados):
     """Grava JSON com permissão 0600 (só o dono lê), criando a pasta com 0700."""
     os.makedirs(os.path.dirname(caminho), mode=0o700, exist_ok=True)
-    fd = os.open(caminho, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    fd = os.open(caminho, os.O_WRONLY | os.O_CREAT, 0o600)
+    try:
+        os.fchmod(fd, 0o600)           # antes de gravar: vale também se o arquivo já existia com permissão larga
+    except (AttributeError, OSError):  # Windows
+        pass
+    os.ftruncate(fd, 0)
     with os.fdopen(fd, 'w', encoding='utf-8') as f:
         json.dump(dados, f, ensure_ascii=False, indent=2)
     try:
@@ -41,15 +46,18 @@ def validar(d):
     """Normaliza e valida um plano. Levanta ValueError com a mensagem para o usuário."""
     if not isinstance(d, dict):
         raise ValueError('plano inválido')
-    if d.get('horizonte') not in HORIZONTES:
+    h, o = str(d.get('horizonte', '')).strip().lower(), str(d.get('objetivo', '')).strip().lower()
+    if h not in HORIZONTES:
         raise ValueError(f'horizonte deve ser um de: {", ".join(HORIZONTES)}')
-    if d.get('objetivo') not in OBJETIVOS:
+    if o not in OBJETIVOS:
         raise ValueError(f'objetivo deve ser um de: {", ".join(OBJETIVOS)}')
-    saida = {'horizonte': d['horizonte'], 'objetivo': d['objetivo']}
+    saida = {'horizonte': h, 'objetivo': o}
     for k, padrao in PADRAO.items():
         v = d.get(k, padrao)
+        if isinstance(v, bool):
+            raise ValueError(f'{k} deve ser um número')
         try:
-            v = float(v)
+            v = float(str(v).replace(',', '.'))
         except (TypeError, ValueError):
             raise ValueError(f'{k} deve ser um número')
         if not 0 < v <= 100:
@@ -91,13 +99,16 @@ def nota_no_horizonte(componentes, horizonte, nota_semanal=None):
     """
     if horizonte == 'semanas':
         return nota_semanal
-    if not isinstance(componentes, dict):
+    if not isinstance(componentes, dict) or horizonte not in HORIZONTES:
         return None
     pesos = horizontes()[horizonte]['pesos']
     try:
-        return round(sum(pesos[k] * float(componentes[k]) for k in COMPONENTES), 2)
+        valores = [float(componentes[k]) for k in COMPONENTES]
     except (KeyError, TypeError, ValueError):
         return None
+    if not all(math.isfinite(v) and 0 <= v <= 10 for v in valores):
+        return None
+    return round(sum(pesos[k] * v for k, v in zip(COMPONENTES, valores)), 2)
 
 
 def risco_vs_tolerancia(linhas, horizonte, queda_max_pct):

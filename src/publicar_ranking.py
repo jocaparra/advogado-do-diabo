@@ -19,7 +19,10 @@ def main():
         sys.exit('uso: python src/publicar_ranking.py <pasta_da_semana> [publico/ranking.json]')
     pasta = C.pasta_semana(sys.argv[:2])
     saida = os.path.abspath(sys.argv[2] if len(sys.argv) == 3 else 'publico/ranking.json')
-    dados = M.exportar_publico(pasta)
+    try:
+        dados = M.exportar_publico(pasta)
+    except (OSError, ValueError, KeyError) as e:
+        sys.exit(f'não consegui ler a análise de {pasta}: {e}')
     os.makedirs(os.path.dirname(saida), exist_ok=True)
     with open(saida, 'w', encoding='utf-8') as f:
         json.dump(dados, f, ensure_ascii=False, indent=2)

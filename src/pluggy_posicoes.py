@@ -13,6 +13,7 @@ Só stdlib. A chave de API da Pluggy vale poucas horas e é pedida a cada execu�
 nenhuma chamada move dinheiro nem altera conexões.
 """
 import json
+import math
 import os
 import re
 import sys
@@ -51,7 +52,11 @@ def _chamar(metodo, caminho, chave=None, corpo=None, consulta=None):
 
 
 def autenticar(client_id, client_secret):
-    return _chamar('POST', '/auth', corpo={'clientId': client_id, 'clientSecret': client_secret})['apiKey']
+    r = _chamar('POST', '/auth', corpo={'clientId': client_id, 'clientSecret': client_secret})
+    chave = r.get('apiKey') if isinstance(r, dict) else None
+    if not chave:
+        raise PluggyErro('a Pluggy não devolveu a chave de acesso; confira Client ID e Client Secret')
+    return chave
 
 
 def investimentos(chave, item_id):
@@ -59,10 +64,22 @@ def investimentos(chave, item_id):
     pagina, saida = 1, []
     while True:
         r = _chamar('GET', '/investments', chave, consulta={'itemId': item_id, 'page': pagina, 'pageSize': 500})
-        saida += r.get('results', [])
-        if pagina >= r.get('totalPages', 1):
+        if not isinstance(r, dict):
+            raise PluggyErro('resposta inesperada da Pluggy em /investments')
+        saida += [i for i in (r.get('results') or []) if isinstance(i, dict)]
+        total = r.get('totalPages')
+        if pagina >= (total if isinstance(total, int) else 1):
             return saida
         pagina += 1
+
+
+def _numero(x):
+    """float finito (aceita texto com vírgula ou ponto) ou None."""
+    try:
+        v = float(x.replace(',', '.')) if isinstance(x, str) else float(x)
+    except (TypeError, ValueError, AttributeError):
+        return None
+    return v if math.isfinite(v) else None
 
 
 def extrair_acoes(invs):
@@ -73,19 +90,20 @@ def extrair_acoes(invs):
     """
     por_tk, valor_tk, ignorados = {}, {}, []
     for i in invs:
+        if not isinstance(i, dict):
+            continue
         tipo, nome = i.get('type'), i.get('name') or i.get('code') or '?'
         codigo = str(i.get('code') or '').strip().upper()
         if tipo not in TIPOS_ACAO:
             ignorados.append(f'{nome} ({tipo or "tipo n/d"})')
         elif not TICKER.fullmatch(codigo):
             ignorados.append(f'{nome} (código {codigo or "vazio"} não parece ticker)')
-        elif not i.get('quantity'):
+        elif (q := _numero(i.get('quantity'))) is None or q <= 0:
             ignorados.append(f'{codigo} (sem quantidade)')
         else:
             tk = codigo[:-1] if codigo.endswith('F') else codigo
-            q = float(i['quantity'])
             por_tk[tk] = por_tk.get(tk, 0) + q
-            valor_tk[tk] = valor_tk.get(tk, 0) + q * float(i.get('value') or 0)
+            valor_tk[tk] = valor_tk.get(tk, 0) + q * (_numero(i.get('value')) or 0)
     return [{'ticker': t, 'quantidade': q,
              'preco_atual': round(valor_tk[t] / q, 4) if valor_tk[t] else None}
             for t, q in sorted(por_tk.items())], ignorados
