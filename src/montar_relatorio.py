@@ -63,7 +63,9 @@ except FileNotFoundError:
     TX = {}
 PAG = TX.get('paginas', {})
 NOTAS = TX.get('notas_paginas', {})
-PARAM = {'corte_compra': 5.8, 'min_casas_consenso': 3, 'top_n_risco': 5, **TX.get('parametros', {})}
+import regras as R
+PARAM = {'min_casas_consenso': 3, 'top_n_risco': 5, **TX.get('parametros', {})}
+PARAM['corte_compra'] = R.corte_de_compra(S['ranking'], TX) or 0
 POL = TX.get('politica_fontes', {})
 DADOS_XP = C.data_br(XP['dados_ate'])
 MES_XP = C.mes_extenso(XP['data_relatorio'])

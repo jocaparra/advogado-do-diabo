@@ -86,10 +86,14 @@ def avaliar_entradas(semanas, series, hoje):
                 d0 = dt.date.fromisoformat(r.get('data_cotacao') or sem['data'])
             except ValueError:
                 continue
-            p0 = r.get('preco_atual')
             s = series.get(r['ticker'])
-            if not p0 or s is None:
+            if s is None or not r.get('preco_atual'):
                 continue
+            # preço inicial na MESMA base da série mais recente (ajustada por desdobramentos);
+            # o preço gravado no histórico é o nominal da época e quebraria o retorno após um split
+            _, p0 = fechamento(s, d0)
+            if p0 is None:
+                p0 = r['preco_atual']
             _, b0 = fechamento(ibov, d0)
             for h, dias in HORIZONTES.items():
                 alvo = d0 + dt.timedelta(days=dias)

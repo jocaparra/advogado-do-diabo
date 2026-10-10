@@ -269,6 +269,15 @@ def calcular(saida, meta, preco, acoes, cambio=None, unit_acoes=None):
         if mcap:
             reg('valor_de_mercado', mcap, moeda, cert, f'preço {preco["valor"]} ({preco["data"]}) x ações em circulação')
     if mcap:
+        # sanidade de escala: múltiplos absurdos indicam quantidade de ações em escala errada
+        pvp_s = mcap / pl_c if (pl_c and pl_c > 0) else None
+        pl_s = mcap / ll if (ll and ll > 0) else None
+        if (pvp_s is not None and not 0.05 <= pvp_s <= 80) or (pl_s is not None and not 0.5 <= pl_s <= 400):
+            avisos.append(f'valor de mercado inconsistente com patrimônio e lucro (P/VP {pvp_s if pvp_s is None else round(pvp_s, 3)}, '
+                          f'P/L {pl_s if pl_s is None else round(pl_s, 2)}): possível erro de escala nas ações; múltiplos não calculados')
+            out['valor_de_mercado']['certeza'] = 'baixa'
+            mcap = None
+    if mcap:
         if ll and ll > 0:
             reg('p_l', mcap / ll, 'x', out['valor_de_mercado']['certeza'], 'valor de mercado / lucro 12 meses')
         elif ll is not None:
@@ -319,9 +328,10 @@ def calcular(saida, meta, preco, acoes, cambio=None, unit_acoes=None):
         item['roe_pct'] = (l_ / pl_a * 100) if (l_ is not None and pl_a and pl_a > 0) else None
         if not (r_ in (None, 0) and l_ in (None, 0)):
             hist.append(item)
-    if len(hist) >= 2 and hist[-1]['receita'] and hist[-2]['receita']:
+    consecutivos = len(hist) >= 2 and hist[-1]['ano'] - hist[-2]['ano'] == 1
+    if consecutivos and hist[-1]['receita'] and hist[-2]['receita']:
         reg('crescimento_receita_ultimo_ano', (hist[-1]['receita'] / hist[-2]['receita'] - 1) * 100, '%', 'alta', f'DFP {hist[-1]["ano"]} contra {hist[-2]["ano"]}')
-    if len(hist) >= 2 and hist[-1]['lucro_liquido'] and hist[-2]['lucro_liquido'] and hist[-2]['lucro_liquido'] > 0:
+    if consecutivos and hist[-1]['lucro_liquido'] and hist[-2]['lucro_liquido'] and hist[-2]['lucro_liquido'] > 0:
         reg('crescimento_lucro_ultimo_ano', (hist[-1]['lucro_liquido'] / hist[-2]['lucro_liquido'] - 1) * 100, '%', 'alta', f'DFP {hist[-1]["ano"]} contra {hist[-2]["ano"]}')
     return {'tipo': 'financeira' if fin else 'nao_financeira', 'escopo': 'consolidado' if escopo == 'con' else 'individual',
             'moeda': moeda, 'valores': out, 'historico_anual': hist, 'avisos': avisos}

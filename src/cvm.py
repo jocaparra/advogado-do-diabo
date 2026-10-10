@@ -18,6 +18,9 @@ CACHE = os.environ.get('CARTEIRA_CACHE', os.path.join(RAIZ, '.cache', 'cvm'))
 csv.field_size_limit(10 ** 8)
 
 
+AVISOS_REDE = []  # preenchido quando um download falha e o cache antigo é usado
+
+
 class SemDadoCVM(Exception):
     """Emissor sem demonstrações na CVM (ex.: BDR de empresa estrangeira)."""
 
@@ -42,7 +45,9 @@ def baixar(rel, max_idade_dias=7):
     except Exception:
         if os.path.exists(tmp):
             os.remove(tmp)
-        if os.path.exists(destino):  # melhor um cache antigo do que nada, o aviso fica no relatório
+        if os.path.exists(destino):  # melhor um cache antigo do que nada, mas o uso fica registrado
+            idade = int((time.time() - os.path.getmtime(destino)) / 86400)
+            AVISOS_REDE.append(f'{rel}: download falhou, usado arquivo em cache com {idade} dias')
             return destino
         raise
     return destino

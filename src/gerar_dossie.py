@@ -6,6 +6,7 @@ Entradas: fundamentos_cvm.json (obrigatório), precos.json, sintese.json, casas.
 (opcional, escrito pelo agente fundamentos), dados/perfis_setoriais.json e dados/premissas_valuation.json.
 Saídas: dossie.json e graficos/dossie_TICKER.png (histórico e faixa de valuation contra preço, alvo XP e casas).
 """
+import datetime as dt
 import json
 import os
 import sys
@@ -31,6 +32,9 @@ def construir(pasta):
     perfis = C.ler(os.path.join(RAIZ, 'dados', 'perfis_setoriais.json'))
     prem = C.ler(os.path.join(RAIZ, 'dados', 'premissas_valuation.json'))
     rk = {r['ticker']: r for r in sy.get('ranking', [])}
+    a_, m_, d_ = C.data_semana(pasta)
+    hoje = dt.date(a_, m_, d_)
+    pol_r = R.parametros(C.ler(os.path.join(pasta, 'textos.json'), {}))
     saida = {'data': cv['data_coleta'], 'fonte': 'fundamentos_cvm.json (CVM), precos.json, premissas em dados/premissas_valuation.json',
              'premissas': {k: prem[k] for k in ('horizonte_anos', 'cenarios', 'grade')}, 'tickers': {}}
     for t, v in cv['tickers'].items():
@@ -40,8 +44,7 @@ def construir(pasta):
         r = rk.get(t, {})
         item['referencias'] = {'alvo_xp': R.num(r.get('preco_alvo_xp')), 'mediana_casas': R.num(r.get('mediana_casas')),
                                'n_alvos_mediana': r.get('n_alvos_mediana'), 'nota': r.get('nota'), 'acao': r.get('acao_sugerida')}
-        casas_alvos = [c['preco_alvo'] for c in ca.get('tickers', {}).get(t, {}).get('casas', [])
-                       if c.get('situacao') == 'verificada' and R.num(c.get('preco_alvo')) is not None and c.get('moeda', 'R$') == 'R$']
+        casas_alvos = [v_ for _, v_ in R.alvos_contaveis(ca.get('tickers', {}).get(t, {}).get('casas', []), hoje, pol_r)]
         item['referencias']['faixa_alvos_casas'] = [min(casas_alvos), max(casas_alvos)] if casas_alvos else None
         if v['situacao'] != 'ok':
             item['valuation'] = {'status': 'indisponivel', 'motivo': v.get('motivo', 'sem demonstrações na CVM')}
@@ -157,7 +160,8 @@ def main():
     for t in ok:
         c = d['tickers'][t]['valuation']
         b = c['cenarios']['base']
-        print(f'  {t:7} preço {d["tickers"][t]["preco"]:>7.2f} | valor base {b.get("valor_justo_por_acao", float("nan")):>7.2f} ({b.get("margem_pct", float("nan")):+6.1f}%) '
+        px_ = d['tickers'][t]['preco']
+        print(f'  {t:7} preço {("%7.2f" % px_) if px_ is not None else "    n/d"} | valor base {b.get("valor_justo_por_acao", float("nan")):>7.2f} ({b.get("margem_pct", float("nan")):+6.1f}%) '
               f'| ke implícito {("%.1f%%" % c["ke_implicito_pct"]) if c.get("ke_implicito_pct") is not None else "n/d"} | ROE {c["roe_normalizado_pct"]:4.1f}% (exigido {c.get("roe_exigido_pct", float("nan")):4.1f}%) | g implícito {("%.1f%%" % c["g_implicito_pct"]) if c["g_implicito_pct"] is not None else "n/d"}')
 
 

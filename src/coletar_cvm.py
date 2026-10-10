@@ -74,6 +74,9 @@ def main():
         fx = cambio if (meta.get('moeda') or 'REAL') != 'REAL' else None
         calc = I.calcular(saida, meta, preco, acoes, cambio=fx, unit_acoes=unit)
         docs = sorted({(k[0], k[1], k[2], u) for k, u in meta['documentos'].items()}, key=lambda x: (x[1], x[2]))
+        if not calc:
+            item['motivo'] = ('sem exercício anual completo (31/12) nas demonstrações: empresa nova, exercício social fora do ano civil '
+                              'ou documentos ainda não publicados')
         item.update({'situacao': 'ok' if calc else 'sem_demonstracoes', 'cnpj': cnpj, 'nome': info['nome'],
                      'classe': info['valor_mobiliario'], 'segmento': info['segmento'],
                      'cadastro': cad.get(cnpj, {}),
@@ -84,6 +87,10 @@ def main():
             if acoes:
                 item['acoes'] = {k: acoes[k] for k in ('dt_refer', 'total', 'tesouraria', 'ordinarias', 'preferenciais', 'fonte')}
         resultado['tickers'][t] = item
+    if cvm.AVISOS_REDE:
+        resultado['avisos_coleta'] = sorted(set(cvm.AVISOS_REDE))
+        for av in resultado['avisos_coleta']:
+            print('aviso:', av, file=sys.stderr)
     saida_path = os.path.join(pasta, 'fundamentos_cvm.json')
     with open(saida_path, 'w', encoding='utf-8') as f:
         json.dump(resultado, f, ensure_ascii=False, indent=1)

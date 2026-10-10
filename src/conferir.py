@@ -123,8 +123,8 @@ def conferir(pasta):
     xp, pr, sy, ca = (carregados.get(k) for k in ('xp.json', 'precos.json', 'sintese.json', 'casas.json'))
     ri, tx = carregados.get('risco.json'), carregados.get('textos.json', {})
     cv = carregados.get('fundamentos_cvm.json')
-    par = {'corte_compra': 5.8, **tx.get('parametros', {})}
     pol = R.parametros(tx)
+    par = {'corte_compra': R.corte_de_compra(sy['ranking'], tx) if sy else None}
 
     # 2. cobertura entre arquivos
     if xp and sy and pr:
@@ -168,13 +168,13 @@ def conferir(pasta):
                              esperado=round(calc, 3), encontrado=r['nota'])
             if r['acao_sugerida'] == 'comprar':
                 rel.ok()
-                if r['nota'] < par['corte_compra']:
+                if par['corte_compra'] is not None and r['nota'] < par['corte_compra']:
                     rel.erro('regra_acao', 'sintese.json', f'comprar com nota abaixo do corte {par["corte_compra"]}', t,
                              esperado=f'>= {par["corte_compra"]}', encontrado=r['nota'])
                 ua = _num(r.get('upside_ajustado_pct'))
                 if ua is not None and ua <= 0:
                     rel.erro('regra_acao', 'sintese.json', 'comprar com upside ajustado não positivo', t, encontrado=ua)
-            elif r['acao_sugerida'] == 'aguardar' and r['nota'] >= par['corte_compra']:
+            elif r['acao_sugerida'] == 'aguardar' and par['corte_compra'] is not None and r['nota'] >= par['corte_compra']:
                 rel.aviso('regra_acao', 'sintese.json', 'nota acima do corte mas ação é aguardar (conferir justificativa)', t,
                           encontrado=r['nota'])
 

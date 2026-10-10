@@ -35,6 +35,15 @@ nas fontes e, se for investir, converse com um profissional habilitado.
 - **Comparação com a XP, as casas de análise e o Ibovespa**, e a medição do próprio desempenho
   das recomendações passadas (com aviso quando a amostra é pequena).
 
+## O que você precisa
+
+| Quero | Preciso de |
+|---|---|
+| Ver o dossiê numérico (CVM, valuation, ke implícito) de uma lista de ações | Python 3.10+ e internet. **Sem Claude Code.** `python src/modo_minimo.py semana_AAAAMMDD WEGE3 ITUB4` |
+| Rodar a análise completa com ranking, notícias, casas, auditoria e PDF | [Claude Code](https://claude.com/claude-code) e o PDF mensal da XP. No Claude Code: `/semana` |
+
+Passo a passo e problemas comuns em [docs/COMO_RODAR.md](docs/COMO_RODAR.md).
+
 ## Como funciona
 
 Cada etapa de coleta e julgamento é um agente em [.claude/agents/](.claude/agents/) (Claude Code).
@@ -111,10 +120,11 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-1. **Mensal:** coloque o PDF da XP em uma pasta de trabalho e rode o agente `leitor` no Claude
-   Code para gravar `xp_mensal/AAAAMM/xp.json`.
-2. **Semanal:** peça ao orquestrador para rodar os agentes de coleta e análise. Eles gravam os
-   JSON em `semana_AAAAMMDD/` (contrato em [docs/regras_comuns.md](docs/regras_comuns.md)).
+1. **Mensal:** coloque o PDF da XP na raiz; o comando `/semana` roda o agente `leitor` e grava
+   `xp_mensal/AAAAMM/xp.json`.
+2. **Semanal:** no Claude Code, rode `/semana` (ou `/semana AAAAMMDD`). Ele executa os agentes de
+   coleta e análise, que gravam os JSON em `semana_AAAAMMDD/` (contrato em
+   [docs/regras_comuns.md](docs/regras_comuns.md)).
 3. **Parte determinística**, em ordem (coleta da CVM, derivados, dossiê, conferência, avaliação,
    figuras, PDF e histórico):
 

@@ -16,7 +16,7 @@ L = lambda f, pad=None: C.ler(D + f, pad)
 xp = C.ler(C.arquivo_xp(D.rstrip(os.sep)))
 pr, ma, ca, ri, sy = L("precos.json"), L("macro.json"), L("casas.json"), L("risco.json"), L("sintese.json")
 TX = L("textos.json", {})
-PAR = {"corte_compra": 5.8, "min_casas_consenso": 3, **TX.get("parametros", {})}
+PAR = {"min_casas_consenso": 3, **TX.get("parametros", {})}
 FIGT = TX.get("figuras", {})
 POL = TX.get("politica_fontes", {})
 
@@ -123,7 +123,10 @@ for y, r in zip(ys, rank):
 ax.set_yticks(ys); ax.set_yticklabels([f"{r['posicao']}. {r['ticker']} ({r['setor']})" for r in rank], fontsize=10)
 ax.set_xlim(0, 10); ax.set_ylim(-0.7, len(rank) - 0.3)
 ax.set_xlabel("Nota do analista (0 a 10)"); grid(ax, "x")
-CORTE = PAR["corte_compra"]
+import regras as R
+CORTE = R.corte_de_compra(rank, TX)
+if CORTE is None:
+    CORTE = 10.0  # nenhuma ação em "comprar": a linha fica fora da área útil
 ax.axvline(CORTE, color=BLACK, ls="--", lw=1.4)
 ax.text(CORTE + 0.05, len(rank) - 0.35, f"Corte de compra: nota {n(CORTE)}", fontsize=10, fontweight="bold", va="bottom")
 ax.text(10.15, len(rank) - 0.35, "Certeza", fontsize=10, fontweight="bold", va="bottom")
@@ -188,9 +191,9 @@ MINC = POLR["min_casas_consenso"]
 CONTAGEM = {t: R.contagem_ratings(v["casas"], POLR) for t, v in ca["tickers"].items()}
 f4 = {}
 for t in order:
-    ct = CONTAGEM[t]
+    ct = CONTAGEM.get(t) or {"compra": 0, "neutro": 0, "venda": 0, "n_casas": 0, "casas": []}
     f4[t] = {"compra": ct["compra"], "neutro": ct["neutro"], "venda": ct["venda"], "n_casas": ct["n_casas"],
-             "rating_xp": ca["tickers"][t]["xp"]["rating"], "casas": ct["casas"]}
+             "rating_xp": ca["tickers"].get(t, {}).get("xp", {}).get("rating", "n/d"), "casas": ct["casas"]}
 ok = [t for t in order if f4[t]["n_casas"] >= MINC]
 ins = [t for t in order if f4[t]["n_casas"] < MINC]
 fig = base(4, f"Ratings das casas de análise: compra, neutro e venda (só tickers com {MINC} ou mais casas verificadas)",

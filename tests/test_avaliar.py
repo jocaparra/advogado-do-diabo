@@ -72,6 +72,15 @@ class TesteAvaliacao(unittest.TestCase):
             self.assertEqual(r['horizontes']['4_semanas']['observacoes'], 0)
             self.assertEqual(r['horizontes']['4_semanas']['pendentes'], 2)
 
+    def test_desdobramento_posterior_nao_gera_retorno_falso(self):
+        # preço gravado era nominal da época (100); a série atual está ajustada por split 5:1 (20 em todo o período)
+        ibov = {(dt.date(2026, 1, 1) + dt.timedelta(days=i)).isoformat(): 100000.0 for i in range(120)}
+        acao = {k: 20.0 for k in ibov}
+        sem = {'data': '2026-02-02', 'ranking': [{'posicao': 1, 'ticker': 'XXXX3', 'nota': 7, 'acao_sugerida': 'comprar',
+                                                  'certeza': 'alta', 'preco_atual': 100.0, 'data_cotacao': '2026-02-02'}]}
+        obs, _ = A.avaliar_entradas([sem], {'XXXX3': acao, '^BVSP': ibov}, dt.date(2026, 6, 1))
+        self.assertAlmostEqual(obs['4_semanas'][0]['retorno_pct'], 0.0, places=6)
+
 
 if __name__ == '__main__':
     unittest.main()

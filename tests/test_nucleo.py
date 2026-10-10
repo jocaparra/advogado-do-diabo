@@ -92,6 +92,23 @@ class TesteIndicadores(unittest.TestCase):
         r = I.calcular(s, {'moeda': 'REAL'}, {'valor': 20.0, 'data': '2026-01-02'}, acoes)
         self.assertNotIn('p_l', r['valores'])
 
+    def test_escala_de_acoes_absurda_suprime_multiplos(self):
+        # 100 ações a R$ 20 contra lucro de 200 e PL de 1000 dá P/VP 2; com 1e9 ações o P/VP vira 20 milhões
+        acoes = {'total': 1e12, 'tesouraria': 0.0, 'ordinarias': 1e12, 'preferenciais': 0.0, 'dt_refer': '2025-12-31'}
+        r = I.calcular(self.saida(), {'moeda': 'REAL'}, {'valor': 20.0, 'data': '2026-01-02'}, acoes)
+        self.assertNotIn('p_l', r['valores'])
+        self.assertNotIn('p_vp', r['valores'])
+        self.assertTrue(any('inconsistente' in a for a in r['avisos']))
+
+    def test_crescimento_exige_anos_consecutivos(self):
+        s = self.saida()
+        # exercício de 2023 ausente: 2022 e 2025 não podem virar "crescimento do último ano"
+        dre = s['DRE']['con']
+        dre[('2022-01-01', '2022-12-31')] = {'3.01': conta(500), '3.11.01': conta(50, 'Atribuído a Sócios da Empresa Controladora')}
+        acoes = {'total': 100.0, 'tesouraria': 0.0, 'ordinarias': 100.0, 'preferenciais': 0.0, 'dt_refer': '2025-12-31'}
+        r = I.calcular(s, {'moeda': 'REAL'}, {'valor': 20.0, 'data': '2026-01-02'}, acoes)
+        self.assertNotIn('crescimento_receita_ultimo_ano', r['valores'])
+
 
 class TesteConferencia(unittest.TestCase):
     def test_beta_de_serie_proporcional(self):
@@ -140,6 +157,12 @@ class TesteRegras(unittest.TestCase):
         self.assertEqual(R.upside_ajustado(20.0, 10.0, -5.0, self.pol), 15.0)  # queda não desconta
         self.assertEqual(R.upside_ajustado(16.3, None, 2.79, self.pol), 14.9)  # só o alvo da XP
         self.assertIsNone(R.upside_ajustado(None, None, 3.0, self.pol))
+
+    def test_corte_de_compra_informado_ou_derivado(self):
+        rk = [{'nota': 6.0, 'acao_sugerida': 'comprar'}, {'nota': 5.7, 'acao_sugerida': 'aguardar'}, {'nota': 4.0, 'acao_sugerida': 'evitar'}]
+        self.assertEqual(R.corte_de_compra(rk, {'parametros': {'corte_compra': 5.8}}), 5.8)
+        self.assertEqual(R.corte_de_compra(rk, {}), 5.85)
+        self.assertIsNone(R.corte_de_compra([{'nota': 4, 'acao_sugerida': 'evitar'}], {}))
 
     def test_nota_e_upside(self):
         pesos = {'a': 0.6, 'b': 0.4}

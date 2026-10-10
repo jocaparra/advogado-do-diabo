@@ -55,8 +55,8 @@ def contagem_ratings(casas, pol):
             'venda': sum(c['rating'] == 'venda' for c in cs), 'n_casas': len(cs), 'casas': [c['casa'] for c in cs]}
 
 
-def mediana_alvos(casas, hoje, pol):
-    """(mediana, n, lista) dos preços alvo em R$ das casas contáveis dentro da janela de antiguidade."""
+def alvos_contaveis(casas, hoje, pol):
+    """[(casa, preço alvo em R$)] das casas contáveis dentro da janela de antiguidade."""
     limite = hoje - dt.timedelta(days=round(pol['janela_meses_alvos'] * 30.4))
     alvos = []
     for c in casas:
@@ -66,6 +66,12 @@ def mediana_alvos(casas, hoje, pol):
         if d is None or d < limite or d > hoje:
             continue
         alvos.append((c['casa'], c['preco_alvo']))
+    return alvos
+
+
+def mediana_alvos(casas, hoje, pol):
+    """(mediana, n, lista de casas) dos preços alvo contáveis."""
+    alvos = alvos_contaveis(casas, hoje, pol)
     valores = [v for _, v in alvos]
     return (statistics.median(valores) if valores else None), len(valores), [n for n, _ in alvos]
 
@@ -82,6 +88,19 @@ def upside_ajustado(up_xp, up_med, ret_5d, pol):
         return None
     desconto = pol['peso_desconto_rali'] * max(num(ret_5d) or 0.0, 0.0)
     return round(sum(base) / len(base) - desconto, 1)
+
+
+def corte_de_compra(ranking, textos=None):
+    """Nota de corte para 'comprar': a informada em textos.json (parametros.corte_compra) ou, se ausente,
+    o ponto médio entre a menor nota de 'comprar' e a maior nota das demais. None se não houver 'comprar'."""
+    informado = (textos or {}).get('parametros', {}).get('corte_compra')
+    if num(informado) is not None:
+        return informado
+    compra = [r['nota'] for r in ranking if r.get('acao_sugerida') == 'comprar']
+    resto = [r['nota'] for r in ranking if r.get('acao_sugerida') != 'comprar']
+    if not compra:
+        return None
+    return round((min(compra) + max([x for x in resto if x < min(compra)] or [min(compra) - 0.2])) / 2, 2)
 
 
 def nota(componentes, pesos):
