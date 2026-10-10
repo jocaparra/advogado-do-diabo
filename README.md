@@ -1,4 +1,4 @@
-# carteira-xp
+# advogado-do-diabo
 
 **Uma análise independente e aprofundada, ação por ação, da carteira "Top Ações" da XP, para quem
 quer outra opinião antes de decidir.** Todo mês a XP publica uma carteira recomendada para o

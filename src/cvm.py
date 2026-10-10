@@ -29,7 +29,7 @@ def baixar(rel, max_idade_dias=7):
     destino = os.path.join(CACHE, rel.replace('/', '__'))
     if os.path.exists(destino) and (time.time() - os.path.getmtime(destino)) < max_idade_dias * 86400:
         return destino
-    req = urllib.request.Request(f'{BASE_URL}/{rel}', headers={'User-Agent': 'carteira-xp/1.0 (pesquisa)'})
+    req = urllib.request.Request(f'{BASE_URL}/{rel}', headers={'User-Agent': 'advogado-do-diabo/1.0 (pesquisa)'})
     tmp = destino + '.parte'
     try:
         with urllib.request.urlopen(req, timeout=180) as r, open(tmp, 'wb') as f:

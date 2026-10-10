@@ -717,7 +717,7 @@ story += [Meta('Lista de fontes', 'Fonte, data e link de cada informação usada
                'fontes citadas ao longo do relatório'), tf]
 # Money Times e Seu Dinheiro ficam sinalizados: ver lacunas
 doc = BaseDocTemplate(OUT, pagesize=(PW, PH), leftMargin=FR_X, rightMargin=28, topMargin=60, bottomMargin=34,
-                      title=f'Carteira Top Ações XP: análise semanal de {DATA_REL}', author='carteira-xp (projeto de código aberto)')
+                      title=f'Advogado do Diabo: análise semanal de {DATA_REL}', author='advogado-do-diabo (projeto de código aberto)')
 doc.addPageTemplates([PageTemplate(id='p', frames=[Frame(FR_X, FR_Y, FR_W, FR_H, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)], onPageEnd=deco)])
 doc.build(story)
 print('PDF gerado:', OUT)
