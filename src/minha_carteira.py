@@ -1,12 +1,17 @@
 """Cruza as posições de uma carteira pessoal com o ranking da semana. Um comando só.
 
 uso: python src/minha_carteira.py [--semana PASTA | --ranking ARQUIVO_OU_URL] [--csv ARQUIVO | --pluggy] [--salvar ARQUIVO]
+       python src/minha_carteira.py --configurar | --esquecer
 
 Fonte das posições (nesta ordem, se nada for indicado):
     1. --csv ARQUIVO              CSV com ticker;quantidade[;preco_medio][;preco_atual]
     2. --pluggy, ou as variáveis PLUGGY_CLIENT_ID, PLUGGY_CLIENT_SECRET e PLUGGY_ITEM_IDS
        definidas (MeuPluggy / Open Finance, somente leitura; veja src/pluggy_posicoes.py)
-    3. entrada/posicoes.csv
+    3. a configuração salva por --configurar (feita uma vez; vale nas próximas execuções)
+    4. entrada/posicoes.csv
+
+--configurar guarda Client ID, Client Secret e Item ID(s) em ~/.config/advogado-do-diabo/config.json
+(permissão só do seu usuário, fora de qualquer repositório); --esquecer apaga esse arquivo.
 
 Ranking: a pasta semana_* mais recente (na pasta atual ou na do projeto) com sintese.json; --semana
 indica outra; --ranking ARQUIVO_OU_URL usa um ranking publicado (gerado por src/publicar_ranking.py).
@@ -25,6 +30,7 @@ ignora seu perfil, seus objetivos e seus impostos.
 """
 import argparse
 import csv
+import getpass
 import glob
 import io
 import json
@@ -322,8 +328,8 @@ Escolha um caminho:
      1. meu.pluggy.ai            conecte sua corretora pelo Open Finance
      2. dashboard.pluggy.ai      crie uma aplicação e copie Client ID e Client Secret
      3. Demo da aplicação        conecte pelo MeuPluggy e copie o Item ID
-     4. export PLUGGY_CLIENT_ID=...  PLUGGY_CLIENT_SECRET=...  PLUGGY_ITEM_IDS=...
-        npx advogado-do-diabo@latest
+     4. npx advogado-do-diabo@latest --configurar     (cola os 3 valores, uma vez)
+        npx advogado-do-diabo@latest                  (nas próximas vezes, só isso)
 
 Detalhes: https://github.com/jocaparra/advogado-do-diabo#cruze-com-a-sua-carteira-5-minutos"""
 
@@ -338,18 +344,91 @@ def _ler_csv(caminho):
         return bruto.decode('cp1252', errors='replace')
 
 
-def _posicoes_pluggy():
-    import pluggy_posicoes as P
+def caminho_config():
+    """~/.config/advogado-do-diabo/config.json (ADVOGADO_DO_DIABO_CONFIG troca o caminho)."""
+    return os.environ.get('ADVOGADO_DO_DIABO_CONFIG') or os.path.join(
+        os.path.expanduser('~'), '.config', 'advogado-do-diabo', 'config.json')
+
+
+def ler_config():
+    """Credenciais salvas por --configurar, ou None."""
+    try:
+        with open(caminho_config(), encoding='utf-8') as f:
+            c = json.load(f)
+    except (OSError, ValueError):
+        return None
+    ok = c.get('client_id') and c.get('client_secret') and isinstance(c.get('item_ids'), list) and c['item_ids']
+    return c if ok else None
+
+
+def salvar_config(client_id, client_secret, item_ids):
+    """Grava com permissão 0600 (só o dono lê), criando a pasta com 0700."""
+    caminho = caminho_config()
+    os.makedirs(os.path.dirname(caminho), mode=0o700, exist_ok=True)
+    fd = os.open(caminho, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w', encoding='utf-8') as f:
+        json.dump({'client_id': client_id, 'client_secret': client_secret, 'item_ids': item_ids}, f)
+    try:
+        os.chmod(caminho, 0o600)
+    except OSError:
+        pass
+    return caminho
+
+
+def _credenciais():
+    """(client_id, secret, itens, origem): variáveis de ambiente primeiro, depois a configuração salva."""
     cid, sec = os.environ.get('PLUGGY_CLIENT_ID'), os.environ.get('PLUGGY_CLIENT_SECRET')
     itens = [x.strip() for x in os.environ.get('PLUGGY_ITEM_IDS', '').split(',') if x.strip()]
-    falta = [n for n, v in (('PLUGGY_CLIENT_ID', cid), ('PLUGGY_CLIENT_SECRET', sec), ('PLUGGY_ITEM_IDS', itens)) if not v]
-    if falta:
-        sys.exit('faltam variáveis de ambiente: ' + ', '.join(falta) + ' (veja docs/MINHA_CARTEIRA.md)')
+    if cid and sec and itens:
+        return cid, sec, itens, 'variáveis de ambiente'
+    c = ler_config()
+    if c:
+        return c['client_id'], c['client_secret'], c['item_ids'], 'configuração salva'
+    return cid, sec, itens, None
+
+
+def configurar():
+    import pluggy_posicoes as P
+    print('Configuração do MeuPluggy (feita uma vez). Os dados ficam só nesta máquina.\n'
+          'Onde pegar cada valor: https://github.com/jocaparra/advogado-do-diabo#caminho-b-puxar-da-corretora-open-finance-grátis\n')
+    try:
+        cid = input('Client ID: ').strip()
+        sec = getpass.getpass('Client Secret (não aparece enquanto digita): ').strip()
+        itens = [x.strip() for x in input('Item ID (vários separados por vírgula): ').split(',') if x.strip()]
+    except (EOFError, KeyboardInterrupt):
+        sys.exit('\ncancelado; nada foi salvo.')
+    if not (cid and sec and itens):
+        sys.exit('preencha Client ID, Client Secret e ao menos um Item ID; nada foi salvo.')
+    print('Testando a conexão...')
+    try:
+        pos, _ = P.baixar(cid, sec, itens)
+    except P.PluggyErro as e:
+        sys.exit(f'não consegui conectar: {e}\nNada foi salvo. Confira os três valores e tente de novo.')
+    caminho = salvar_config(cid, sec, itens)
+    print(f'ok: {len(pos)} ações/ETFs encontrados. Configuração salva em {caminho}')
+    print('Daqui em diante basta rodar:  npx advogado-do-diabo@latest\n'
+          'Para apagar:  npx advogado-do-diabo@latest --esquecer')
+
+
+def esquecer():
+    caminho = caminho_config()
+    try:
+        os.remove(caminho)
+        print(f'configuração apagada: {caminho}')
+    except FileNotFoundError:
+        print('não havia configuração salva.')
+
+
+def _posicoes_pluggy():
+    import pluggy_posicoes as P
+    cid, sec, itens, origem = _credenciais()
+    if not origem:
+        sys.exit('MeuPluggy ainda não configurado. Rode uma vez:  npx advogado-do-diabo@latest --configurar')
     try:
         pos, ignorados = P.baixar(cid, sec, itens)
     except P.PluggyErro as e:
         sys.exit(str(e))
-    print(f'Pluggy: {len(pos)} ações/ETFs de {len(itens)} conexão(ões).')
+    print(f'Pluggy ({origem}): {len(pos)} ações/ETFs de {len(itens)} conexão(ões).')
     for g in ignorados:
         print('  não incluído:', g)
     return M_ler(P.csv_texto(pos))
@@ -367,16 +446,22 @@ def main():
     ap.add_argument('--semana', help='pasta da semana (padrão: a mais recente)')
     ap.add_argument('--ranking', help='ranking publicado: arquivo .json ou URL https')
     ap.add_argument('--salvar', help='grava o relatório (.md) neste arquivo (modo ranking publicado)')
+    ap.add_argument('--configurar', action='store_true', help='salva suas chaves do MeuPluggy (uma vez)')
+    ap.add_argument('--esquecer', action='store_true', help='apaga a configuração salva')
     fonte = ap.add_mutually_exclusive_group()
     fonte.add_argument('--csv', help='CSV de posições')
     fonte.add_argument('--pluggy', action='store_true', help='ler posições do MeuPluggy (variáveis PLUGGY_*)')
     a = ap.parse_args()
+    if a.configurar:
+        return configurar()
+    if a.esquecer:
+        return esquecer()
 
     if a.semana and a.ranking:
         sys.exit('use --semana ou --ranking, não os dois')
     pasta = C.pasta_semana(['x', a.semana]) if a.semana else (None if a.ranking else _semana_recente())
-    tem_env = all(os.environ.get(v) for v in ('PLUGGY_CLIENT_ID', 'PLUGGY_CLIENT_SECRET', 'PLUGGY_ITEM_IDS'))
-    if a.csv or (not a.pluggy and not tem_env):
+    tem_pluggy = _credenciais()[3] is not None
+    if a.csv or (not a.pluggy and not tem_pluggy):
         caminho = os.path.abspath(a.csv or 'entrada/posicoes.csv')
         if not os.path.isfile(caminho):
             sys.exit(AJUDA_FONTE.format(caminho=caminho))

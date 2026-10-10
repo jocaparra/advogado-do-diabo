@@ -73,20 +73,29 @@ Feito **uma vez**; depois é um comando só. Usa o MeuPluggy, em que você mesmo
    crie uma aplicação e copie o **Client ID** e o **Client Secret** (são seus; não compartilhe).
 3. **Pegue o ID da conexão.** Na aplicação, abra a *Demo*, conecte pelo conector **MeuPluggy** e,
    no menu de três pontos, copie o **Item ID**.
-4. **Rode:**
+4. **Salve uma vez.** No terminal:
 
    ```bash
-   export PLUGGY_CLIENT_ID="cole-aqui"
-   export PLUGGY_CLIENT_SECRET="cole-aqui"
-   export PLUGGY_ITEM_IDS="cole-aqui"
+   npx advogado-do-diabo@latest --configurar
+   ```
+
+   Ele pergunta Client ID, Client Secret (não aparece enquanto você digita) e Item ID, testa a
+   conexão e só então salva em `~/.config/advogado-do-diabo/config.json`, com permissão só do seu
+   usuário e fora de qualquer repositório.
+5. **Daqui em diante é automático.** Na semana seguinte (e em todas), basta:
+
+   ```bash
    npx advogado-do-diabo@latest
    ```
 
-   (No Windows PowerShell, use `$env:PLUGGY_CLIENT_ID="..."` no lugar de `export`.)
+   Para apagar o que foi salvo: `npx advogado-do-diabo@latest --esquecer`. (Quem preferir não
+   guardar nada em arquivo pode definir `PLUGGY_CLIENT_ID`, `PLUGGY_CLIENT_SECRET` e
+   `PLUGGY_ITEM_IDS` no terminal; elas têm prioridade sobre o arquivo.)
 
-A leitura é somente leitura: não move dinheiro nem altera nada. As variáveis valem só naquela
-janela do terminal e não ficam gravadas. Limites: até 5 conexões por pessoa, sem garantia de
-funcionamento (plano gratuito); confira as condições em [pluggy.ai/pricing](https://pluggy.ai/pricing).
+A leitura é somente leitura: não move dinheiro nem altera nada. Limites: até 5 conexões por
+pessoa, sem garantia de funcionamento (plano gratuito); o consentimento do Open Finance expira e
+pode precisar ser renovado no MeuPluggy. Confira as condições em
+[pluggy.ai/pricing](https://pluggy.ai/pricing).
 
 ### O que você vê
 

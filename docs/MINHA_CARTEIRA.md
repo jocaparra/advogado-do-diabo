@@ -62,12 +62,16 @@ Feito uma vez:
 3. Na aplicação, abra a **Demo**, conecte pelo conector **MeuPluggy** e, no menu de três pontos,
    copie o **Item ID**.
 
-Defina as variáveis e rode (valem só naquele terminal e não ficam em arquivo):
+Salve uma vez e depois é automático:
 
 ```bash
-export PLUGGY_CLIENT_ID=... PLUGGY_CLIENT_SECRET=... PLUGGY_ITEM_IDS=id1,id2
-python src/minha_carteira.py
+python src/minha_carteira.py --configurar     # ou: npx advogado-do-diabo@latest --configurar
+python src/minha_carteira.py                  # nas próximas vezes, só isso
 ```
+
+A configuração fica em `~/.config/advogado-do-diabo/config.json` (permissão 0600, fora de
+qualquer repositório); `--esquecer` apaga. As variáveis `PLUGGY_CLIENT_ID`,
+`PLUGGY_CLIENT_SECRET` e `PLUGGY_ITEM_IDS` têm prioridade sobre o arquivo.
 
 A leitura é somente leitura: o programa não move dinheiro nem altera conexões. O plano gratuito
 do MeuPluggy permite até 5 conexões ativas por titular e não tem SLA.

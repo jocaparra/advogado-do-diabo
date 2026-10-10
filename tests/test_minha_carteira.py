@@ -83,11 +83,47 @@ class TesteCruzamento(unittest.TestCase):
         self.assertIn('Minha carteira', M.md(r, '2026-10-05'))
 
 
+class TesteConfig(unittest.TestCase):
+    def setUp(self):
+        self.d = tempfile.TemporaryDirectory()
+        self.antes = {k: os.environ.get(k) for k in
+                      ('ADVOGADO_DO_DIABO_CONFIG', 'PLUGGY_CLIENT_ID', 'PLUGGY_CLIENT_SECRET', 'PLUGGY_ITEM_IDS')}
+        os.environ['ADVOGADO_DO_DIABO_CONFIG'] = os.path.join(self.d.name, 'sub', 'config.json')
+        for k in ('PLUGGY_CLIENT_ID', 'PLUGGY_CLIENT_SECRET', 'PLUGGY_ITEM_IDS'):
+            os.environ.pop(k, None)
+
+    def tearDown(self):
+        for k, v in self.antes.items():
+            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+        self.d.cleanup()
+
+    def test_salva_le_e_apaga_com_permissao_restrita(self):
+        self.assertIsNone(M.ler_config())
+        caminho = M.salvar_config('cid', 'seg', ['i1', 'i2'])
+        self.assertEqual(oct(os.stat(caminho).st_mode & 0o777), oct(0o600))
+        self.assertEqual(M._credenciais(), ('cid', 'seg', ['i1', 'i2'], 'configuração salva'))
+        M.esquecer()
+        self.assertIsNone(M.ler_config())
+        self.assertIsNone(M._credenciais()[3])
+
+    def test_variavel_de_ambiente_vence_o_arquivo(self):
+        M.salvar_config('arq', 'arq', ['a'])
+        os.environ.update(PLUGGY_CLIENT_ID='env', PLUGGY_CLIENT_SECRET='env', PLUGGY_ITEM_IDS='x,y')
+        self.assertEqual(M._credenciais(), ('env', 'env', ['x', 'y'], 'variáveis de ambiente'))
+
+    def test_arquivo_incompleto_e_ignorado(self):
+        caminho = M.caminho_config()
+        os.makedirs(os.path.dirname(caminho))
+        with open(caminho, 'w') as f:
+            json.dump({'client_id': 'x'}, f)
+        self.assertIsNone(M.ler_config())
+
+
 class TesteAjuda(unittest.TestCase):
     def test_mensagem_de_ajuda_formata(self):
         txt = M.AJUDA_FONTE.format(caminho='/x/entrada/posicoes.csv')
         self.assertIn('--csv minhas_acoes.csv', txt)
-        self.assertIn('PLUGGY_ITEM_IDS', txt)
+        self.assertIn('--configurar', txt)
 
 
 class TestePublico(unittest.TestCase):
