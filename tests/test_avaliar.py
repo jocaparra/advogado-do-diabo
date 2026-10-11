@@ -81,6 +81,73 @@ class TesteAvaliacao(unittest.TestCase):
         obs, _ = A.avaliar_entradas([sem], {'XXXX3': acao, '^BVSP': ibov}, dt.date(2026, 6, 1))
         self.assertAlmostEqual(obs['4_semanas'][0]['retorno_pct'], 0.0, places=6)
 
+    def test_veredito_por_direcao_e_banda(self):
+        self.assertEqual(A.veredito('acima', 0.5, 6), 'acerto')
+        self.assertEqual(A.veredito('acima', -0.5, 6), 'erro')
+        self.assertEqual(A.veredito('abaixo', -5, 6), 'acerto')
+        self.assertEqual(A.veredito('abaixo', 1, 6), 'erro')
+        self.assertEqual(A.veredito('neutra', 5.9, 6), 'neutro_confirmado')
+        self.assertEqual(A.veredito('neutra', 13, 6), 'oportunidade_perdida')
+        self.assertEqual(A.veredito('neutra', -7, 6), 'queda_evitada')
+        self.assertEqual(A.veredito(None, 1, 6), 'inconclusivo')
+
+    def test_horizonte_de_uma_semana_e_marcacao_por_previsao(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.monta(tmp)
+            r = A.avaliar(tmp, hoje=dt.date(2026, 7, 1))
+            h1 = r['horizontes']['1_semana']
+            self.assertEqual(h1['observacoes'], 2)
+            self.assertEqual(h1['por_veredito'], {'acerto': 2})  # AAA3 comprar sobe, BBB3 evitar cai
+            self.assertEqual(h1['acerto_direcional_pct'], 100.0)
+            obs = {o['ticker']: o for o in r['observacoes']['1_semana']}
+            self.assertEqual(obs['AAA3']['direcao_esperada'], 'acima')
+            self.assertEqual(obs['BBB3']['direcao_esperada'], 'abaixo')
+
+    def test_spearman_por_componente_usa_componentes_gravados(self):
+        obs = [{'semana': 's', 'ticker': t, 'posicao': i, 'nota': 5, 'acao': 'aguardar', 'certeza': 'baixa', 'retorno_pct': 0,
+                'ibovespa_pct': 0, 'excesso_pp': ex, 'veredito': 'neutro_confirmado', 'componentes': {'momentum': m}}
+               for i, (t, ex, m) in enumerate([('A', 1, 2), ('B', 2, 5), ('C', 3, 9), ('D', 4, 9.5)])]
+        ag = A.agregar(obs)
+        self.assertAlmostEqual(ag['spearman_por_componente']['momentum']['spearman_medio'], 1.0)
+        self.assertNotIn('noticias', ag['spearman_por_componente'])  # sem dado, não inventa
+
+    def test_linha_malformada_nao_derruba_a_avaliacao(self):
+        ibov = {(dt.date(2026, 1, 1) + dt.timedelta(days=i)).isoformat(): 100000.0 + i for i in range(120)}
+        acao = {k: 10.0 + i * 0.01 for i, k in enumerate(ibov)}
+        base = {'posicao': 1, 'ticker': 'AAA3', 'nota': 7, 'acao_sugerida': 'comprar', 'certeza': 'alta',
+                'preco_atual': 10.3, 'data_cotacao': '2026-02-01'}
+        quebradas = [{k: v for k, v in base.items() if k != faltando} for faltando in ('posicao', 'nota', 'acao_sugerida', 'ticker')]
+        quebradas.append({**base, 'data_cotacao': 12345})
+        sem = {'data': '2026-02-01', 'ranking': quebradas + [base]}
+        obs, _ = A.avaliar_entradas([sem, {'data': '2026-02-01'}], {'AAA3': acao, '^BVSP': ibov}, dt.date(2026, 6, 1))
+        self.assertEqual(len(obs['4_semanas']), 1)        # só a linha íntegra
+        self.assertEqual(obs['4_semanas'][0]['certeza'], 'alta')
+
+    def test_preco_zero_ou_nan_nao_gera_retorno(self):
+        ibov = {(dt.date(2026, 1, 1) + dt.timedelta(days=i)).isoformat(): 100000.0 for i in range(120)}
+        sem = {'data': '2026-02-01', 'ranking': [{'posicao': 1, 'ticker': 'ZZZ3', 'nota': 7, 'acao_sugerida': 'comprar',
+                                                  'certeza': 'alta', 'preco_atual': 10.0, 'data_cotacao': '2026-02-01'}]}
+        for ruim in (0.0, float('nan')):
+            serie_ruim = {k: ruim for k in ibov}
+            obs, _ = A.avaliar_entradas([sem], {'ZZZ3': serie_ruim, '^BVSP': ibov}, dt.date(2026, 6, 1))
+            self.assertEqual(sum(len(v) for v in obs.values()), 0)
+
+    def test_veredito_nao_finito_e_inconclusivo(self):
+        self.assertEqual(A.veredito('neutra', float('nan'), 6), 'inconclusivo')
+        self.assertEqual(A.veredito('acima', float('inf'), 6), 'inconclusivo')
+
+    def test_tipos_trocados_e_semanas_invalidas_nao_quebram(self):
+        ibov = {(dt.date(2026, 1, 1) + dt.timedelta(days=i)).isoformat(): 100000.0 + i for i in range(120)}
+        acao = {k: 10.0 + i * 0.01 for i, k in enumerate(ibov)}
+        base = {'posicao': 1, 'ticker': 'AAA3', 'nota': 7, 'acao_sugerida': 'comprar', 'certeza': 'alta',
+                'preco_atual': 10.3, 'data_cotacao': '2026-02-01'}
+        ruins = [{**base, 'posicao': 'primeiro'}, {**base, 'nota': 'alta'}, {**base, 'acao_sugerida': 5},
+                 {**base, 'ticker': 123}, {**base, 'nota': True}, 'texto', None, {**base, 'nota': float('nan')}]
+        semanas = [None, 5, {'data': '2026-02-01', 'ranking': 'x'}, {'data': '2026-02-01', 'ranking': ruins + [base]}]
+        obs, _ = A.avaliar_entradas(semanas, {'AAA3': acao, '^BVSP': ibov}, dt.date(2026, 6, 1))
+        self.assertEqual(len(obs['4_semanas']), 1)
+        A.agregar(obs['4_semanas'])                        # não pode levantar nem por tipos misturados
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,4 +1,4 @@
-import json, os, sys, textwrap, datetime as dt
+import json, os, textwrap, datetime as dt
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -16,7 +16,6 @@ L = lambda f, pad=None: C.ler(D + f, pad)
 xp = C.ler(C.arquivo_xp(D.rstrip(os.sep)))
 pr, ma, ca, ri, sy = L("precos.json"), L("macro.json"), L("casas.json"), L("risco.json"), L("sintese.json")
 TX = L("textos.json", {})
-PAR = {"min_casas_consenso": 3, **TX.get("parametros", {})}
 FIGT = TX.get("figuras", {})
 POL = TX.get("politica_fontes", {})
 

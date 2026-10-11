@@ -10,6 +10,7 @@ __pycache__/
 /semana_*/
 /xp_mensal/
 /historico_carteira.json
+/avaliacao.json
 /entrada/
 
 # configuração local do Claude Code (mantém só os agentes)
@@ -23,3 +24,6 @@ __pycache__/
 *.env
 /minha_carteira.*
 /posicoes*.csv
+
+# aprendizado local: retrospectivas, memória e feedback (dados de execução, não versionados)
+/aprendizado/

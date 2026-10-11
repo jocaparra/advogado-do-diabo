@@ -7,7 +7,6 @@ import csv
 import datetime as dt
 import io
 import os
-import re
 import time
 import urllib.request
 import zipfile
@@ -19,10 +18,6 @@ csv.field_size_limit(10 ** 8)
 
 
 AVISOS_REDE = []  # preenchido quando um download falha e o cache antigo é usado
-
-
-class SemDadoCVM(Exception):
-    """Emissor sem demonstrações na CVM (ex.: BDR de empresa estrangeira)."""
 
 
 def baixar(rel, max_idade_dias=7):

@@ -9,7 +9,6 @@ Saídas: dossie.json e graficos/dossie_TICKER.png (histórico e faixa de valuati
 import datetime as dt
 import json
 import os
-import sys
 
 import carteira as C
 import regras as R
@@ -18,7 +17,7 @@ import valuation as V
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def _perfil(ticker, perfis, cad_setor=''):
+def _perfil(ticker, perfis):
     pid = perfis['tickers'].get(ticker, 'generico')
     return pid, perfis['perfis'][pid]
 
@@ -83,7 +82,7 @@ def figuras(d, pasta):
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
-    GOLD, BLACK, GREY, GREEN, RED = '#FFB800', '#000000', '#7F7F7F', '#2E7D32', '#C62828'
+    GOLD, BLACK, GREY, RED = '#FFB800', '#000000', '#7F7F7F', '#C62828'
     out = os.path.join(pasta, 'graficos')
     os.makedirs(out, exist_ok=True)
     pt = lambda x, n=1: f'{x:,.{n}f}'.replace(',', 'X').replace('.', ',').replace('X', '.')

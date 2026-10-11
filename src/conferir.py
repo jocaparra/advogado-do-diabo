@@ -69,9 +69,6 @@ def _data(s):
     return None
 
 
-def retornos_log(serie):
-    return [math.log(serie[i][1] / serie[i - 1][1]) for i in range(1, len(serie))]
-
 
 def beta_vol(acao, ibov, janela=90):
     """Beta contra o Ibovespa e volatilidade anualizada, sobre os últimos `janela` retornos logarítmicos
@@ -140,7 +137,7 @@ def conferir(pasta):
         for nome, s in conj.items():
             rel.ok()
             if s != ref:
-                rel.erro('cobertura', f'{nome}', f'tickers diferentes do xp.json',
+                rel.erro('cobertura', f'{nome}', 'tickers diferentes do xp.json',
                          esperado=sorted(ref - s) or None, encontrado=sorted(s - ref) or None)
 
     # 3. ranking

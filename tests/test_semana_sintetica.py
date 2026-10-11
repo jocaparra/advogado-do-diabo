@@ -4,7 +4,6 @@ Não depende de rede nem de dados reais: valida calcular_derivados, conferir e g
 """
 import datetime as dt
 import json
-import math
 import os
 import subprocess
 import sys

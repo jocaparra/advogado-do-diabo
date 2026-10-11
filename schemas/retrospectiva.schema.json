@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Retrospectiva de uma semana contra fechamentos posteriores",
+  "type": "object",
+  "required": ["versao", "tipo", "semana_avaliada", "data_retrospectiva", "janela", "resumo", "itens", "hipoteses_para_testar", "o_que_nao_concluir", "mudancas_de_parametros"],
+  "properties": {
+    "versao": {"type": "integer"},
+    "tipo": {"const": "retrospectiva"},
+    "semana_avaliada": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "data_retrospectiva": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "janela": {"type": "object", "required": ["inicio", "fim", "pregoes"]},
+    "resumo": {"type": "object", "required": ["n", "excesso_medio_pp", "significancia"]},
+    "itens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ticker", "acao_sugerida", "retorno_pct", "excesso_pp", "veredito", "categoria_causa", "explicacao", "tipo_evidencia", "confianca"],
+        "properties": {
+          "veredito": {"enum": ["acerto", "acerto_fraco", "neutro", "inconclusivo", "oportunidade_perdida", "erro"]},
+          "confianca": {"enum": ["alta", "média", "baixa"]}
+        }
+      }
+    },
+    "hipoteses_para_testar": {
+      "type": "array",
+      "items": {"type": "object", "required": ["id", "texto", "status", "como_testar"], "properties": {"status": {"enum": ["nao_validada", "em_teste", "validada", "refutada"]}}}
+    },
+    "o_que_nao_concluir": {"type": "array", "items": {"type": "string"}},
+    "mudancas_de_parametros": {"type": "array", "maxItems": 0, "description": "Retrospectivas não alteram parâmetros; mudanças passam por proposta aprovada."}
+  }
+}

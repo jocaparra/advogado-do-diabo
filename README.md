@@ -234,11 +234,15 @@ python src/avaliar.py semana_AAAAMMDD             # recomendações vencidas x I
 python src/gerar_graficos.py semana_AAAAMMDD      # figuras
 python src/montar_relatorio.py semana_AAAAMMDD    # PDF
 python src/atualizar_historico.py semana_AAAAMMDD # registra o ranking da semana
+python src/aprender.py fase semana_AAAAMMDD       # fase de aprendizado permitida pelos dados
 python -m unittest discover tests                 # testes offline
 ```
 
 As pastas `semana_*/`, `xp_mensal/` e o `historico_carteira.json` ficam locais e são ignorados
 pelo git.
+
+Como o projeto mede e aprende com as próprias recomendações (e por que isso ainda não é treinamento de
+modelo): [docs/APRENDIZADO.md](docs/APRENDIZADO.md).
 
 ## Limitações conhecidas
 

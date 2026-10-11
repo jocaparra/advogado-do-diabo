@@ -80,7 +80,7 @@ def ler(caminho, padrao=None):
         raise
 
 
-def semana_anterior(pasta, ranking_atual=None):
+def semana_anterior(pasta):
     """Ranking da semana imediatamente anterior ao da pasta, ou None na primeira execução."""
     h = arquivo_historico(pasta)
     if not h:

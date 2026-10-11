@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 """Monta relatorio.pdf (paisagem 16:9) a partir dos JSON da semana. Rodar de novo para refazer."""
-import json, os, re, sys, glob
+import json, os, re, sys
 from xml.sax.saxutils import escape
 import matplotlib
-from reportlab.lib.pagesizes import landscape
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.fonts import addMapping
 from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer, Table, TableStyle,
                                 PageBreak, Flowable, KeepInFrame)
 from reportlab.lib.utils import ImageReader
@@ -35,7 +33,6 @@ GOLD = colors.HexColor('#FFB800'); BLACK = colors.HexColor('#000000'); GRAY = co
 LGRAY = colors.HexColor('#F0F0F0'); GREEN = colors.HexColor('#2E7D32'); AMBER = colors.HexColor('#F9A825')
 RED = colors.HexColor('#C62828'); WHITE = colors.white
 HX = {'gold': '#FFB800', 'gray': '#7F7F7F', 'green': '#2E7D32', 'amber': '#F9A825', 'red': '#C62828', 'black': '#000000'}
-ACAO_COR = {'comprar': GREEN, 'aguardar': AMBER, 'evitar': RED}
 ACAO_HX = {'comprar': HX['green'], 'aguardar': '#B07A00', 'evitar': HX['red']}  # texto do amarelo escurecido p/ leitura? mantido na paleta abaixo
 ACAO_HX['aguardar'] = HX['amber']
 
@@ -129,7 +126,7 @@ def col(txt, v, bold=False):
 def sty(name, size=10, lead=None, font='DV', color=BLACK, align=TA_LEFT, **kw):
     return ParagraphStyle(name, fontName=font, fontSize=size, leading=lead or size * 1.28, textColor=color,
                           alignment=align, **kw)
-BODY = sty('body', 10); SMALL = sty('small', 9, 11.5); BOLD = sty('bold', 10, font='DV-B')
+BODY = sty('body', 10); SMALL = sty('small', 9, 11.5)
 H2 = sty('h2', 11, font='DV-B', spaceAfter=2)
 FRASE = sty('frase', 9, 11.5, font='DV-I', color=BLACK)
 CELL = {a: sty('c' + a, 9, 11, align=al) for a, al in [('L', TA_LEFT), ('R', TA_RIGHT), ('C', TA_CENTER)]}
@@ -139,8 +136,6 @@ CELLK = sty('cellk', 9, 11, wordWrap='CJK')
 def P(t, st=BODY):
     return Paragraph(X(t), st)
 
-def PL(t, st=BODY):
-    return Paragraph(lab(t), st)
 
 def bullets(items, st=SMALL):
     return [Paragraph('• ' + X(i), ParagraphStyle('b', parent=st, leftIndent=9, firstLineIndent=-9, spaceAfter=1.5)) for i in items]
@@ -267,7 +262,6 @@ def page(title, sub, fonte, content, fixed=True):
 
 # ---------- ranking ----------
 RK = S['ranking']
-RKD = {r['ticker']: r for r in RK}
 MOTIVO = TX.get('motivo_por_ticker', {})
 F4 = J('graficos/fig4_dados.json')['por_ticker']
 def cons_short(r):
@@ -433,7 +427,7 @@ def _pagina_avaliacao():
                          f"correlação de postos entre nota e excesso de retorno: {fmt(sp, 2) if sp is not None else 'não definida'}.")
     corpo = [tbl(rows, [150, 150, 110, 260, 234], ['L', 'L', 'R', 'R', 'R'], pad=2), Spacer(1, 6)]
     corpo += bullets(notas) + [Spacer(1, 4), P('Método: ' + AVAL.get('metodo', '') + '. Com amostra insuficiente, nada disso é evidência de que a nota funciona.', SMALL)]
-    return page('Desempenho das recomendações anteriores', 'Retorno contra o Ibovespa 4 e 12 semanas depois de cada recomendação',
+    return page('Desempenho das recomendações anteriores', 'Retorno contra o Ibovespa 1, 4 e 12 semanas depois de cada recomendação',
                 'historico_carteira.json, séries de preço (Yahoo Finance), cálculo do agente', corpo, fixed=False)
 story += _pagina_avaliacao()
 
@@ -524,7 +518,6 @@ def page_dossie(r):
         fonte = f"{c['fonte']}, {c['data']}" if c.get('fonte') else 'pendente'
         chk.append([c['rotulo'], str(c['valor']), fonte])
     t_chk = tbl(chk, [150, 95, 85], ['L', 'L', 'L'], pad=1.5)
-    esq = [Fig(0, 0, 0)] if False else []
     img = os.path.join(GRAF, f'dossie_{t}.png')
     fig_f = []
     if os.path.exists(img):
@@ -615,7 +608,6 @@ for o in CONTRA['objecoes']:
         nota = f'{fmt(i.get("nota_antes"),2)} para {fmt(i.get("nota_depois"),2)}' if i else ''
     seen.add(t)
     rows.append([f'{t} (#{o["posicao"]})', o['forca'].capitalize(), o['objecao'], dec, nota])
-ob_txt = P('Veredito do advogado: ' + CONTRA['veredito_geral'], SMALL)
 rv = S['revisao_pos_advogado']
 story += page('Objeções do advogado', 'Razões contra o ranking e o que o analista aceitou ou rejeitou',
               'Agente advogado (InfoMoney, Yahoo Finance, análise de risco), revisão do analista',

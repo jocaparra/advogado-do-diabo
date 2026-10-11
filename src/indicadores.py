@@ -2,7 +2,6 @@
 
 Cada função é pura (entrada: dicionários já carregados por cvm.py), para poder ser testada.
 """
-import datetime as dt
 import re
 
 from cvm import ult_dia
@@ -78,7 +77,7 @@ def ytd_mais_recente(periodos, ano):
 
 
 def mesmo_periodo_ano_anterior(per):
-    ini, fim = per
+    _, fim = per
     d = ult_dia(fim)
     try:
         d0 = d.replace(year=d.year - 1)

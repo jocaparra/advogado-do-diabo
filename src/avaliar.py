@@ -1,4 +1,4 @@
-"""Avalia as recomendações passadas contra o Ibovespa (4 e 12 semanas) a partir do histórico.
+"""Avalia as recomendações passadas contra o Ibovespa (1, 4 e 12 semanas) a partir do histórico.
 
 uso: python src/avaliar.py <pasta_de_qualquer_semana>
 
@@ -13,13 +13,19 @@ Saída: avaliacao.json (ao lado do histórico). Com amostra pequena o resultado 
 import datetime as dt
 import glob
 import json
+import math
 import os
 import statistics
 import sys
 
 import carteira as C
 
-HORIZONTES = {'4_semanas': 28, '12_semanas': 84}
+HORIZONTES = {'1_semana': 7, '4_semanas': 28, '12_semanas': 84}
+# Faixa (pp de excesso contra o Ibovespa) dentro da qual "aguardar" conta como confirmado. Convenção do
+# projeto, NÃO calibrada: 3 pp em 1 semana escalado pela raiz do prazo (4 sem ~ 6 pp, 12 sem ~ 10 pp).
+BANDA_NEUTRA_PP = {'1_semana': 3.0, '4_semanas': 6.0, '12_semanas': 10.0}
+DIRECAO = {'comprar': 'acima', 'evitar': 'abaixo', 'aguardar': 'neutra'}
+COMPONENTES = ('catalisadores', 'noticias', 'momentum', 'macro_eleicao', 'valuation_upside')
 MIN_OBS = 30        # observações vencidas por horizonte para falar em evidência
 MIN_SEMANAS = 8     # semanas distintas
 JANELA_PRECO = 5    # dias de calendário para trás aceitos ao procurar o fechamento da data
@@ -74,6 +80,30 @@ def fechamento(serie, alvo, janela=JANELA_PRECO):
     return None, None
 
 
+def _num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def _preco_ok(v):
+    """Preço utilizável: número finito e positivo (zero ou NaN quebrariam o retorno)."""
+    return isinstance(v, (int, float)) and math.isfinite(v) and v > 0
+
+
+def veredito(direcao, excesso_pp, banda):
+    """Marca uma previsão contra o excesso observado. `inconclusivo` quando a direção ou o excesso não são utilizáveis."""
+    if not isinstance(excesso_pp, (int, float)) or not math.isfinite(excesso_pp):
+        return 'inconclusivo'
+    if direcao == 'acima':
+        return 'acerto' if excesso_pp > 0 else 'erro'
+    if direcao == 'abaixo':
+        return 'acerto' if excesso_pp < 0 else 'erro'
+    if direcao == 'neutra':
+        if abs(excesso_pp) <= banda:
+            return 'neutro_confirmado'
+        return 'oportunidade_perdida' if excesso_pp > 0 else 'queda_evitada'
+    return 'inconclusivo'
+
+
 def avaliar_entradas(semanas, series, hoje):
     """Lista de observações vencidas e contagem de pendentes, por horizonte."""
     obs = {h: [] for h in HORIZONTES}
@@ -81,10 +111,17 @@ def avaliar_entradas(semanas, series, hoje):
     ibov = series.get('^BVSP', {})
     ultima = max(ibov) if ibov else None
     for sem in semanas:
+        if not isinstance(sem, dict) or not isinstance(sem.get('ranking'), list):
+            continue
         for r in sem['ranking']:
+            # uma linha malformada no histórico não pode derrubar a avaliação inteira
+            if not isinstance(r, dict) or not isinstance(r.get('ticker'), str) or not isinstance(r.get('acao_sugerida'), str):
+                continue
+            if not all(_num(r.get(k)) for k in ('posicao', 'nota')):
+                continue
             try:
-                d0 = dt.date.fromisoformat(r.get('data_cotacao') or sem['data'])
-            except ValueError:
+                d0 = dt.date.fromisoformat(r.get('data_cotacao') or sem.get('data'))
+            except (ValueError, TypeError):
                 continue
             s = series.get(r['ticker'])
             if s is None or not r.get('preco_atual'):
@@ -95,21 +132,26 @@ def avaliar_entradas(semanas, series, hoje):
             if p0 is None:
                 p0 = r['preco_atual']
             _, b0 = fechamento(ibov, d0)
+            if not (_preco_ok(p0) and _preco_ok(b0)):
+                continue
             for h, dias in HORIZONTES.items():
                 alvo = d0 + dt.timedelta(days=dias)
                 if alvo > hoje or ultima is None or alvo.isoformat() > ultima:
                     pend[h] += 1
                     continue
                 d1, p1 = fechamento(s, alvo)
-                d1b, b1 = fechamento(ibov, alvo)
-                if None in (p1, b0, b1):
+                _, b1 = fechamento(ibov, alvo)
+                if not (_preco_ok(p1) and _preco_ok(b1)):
                     continue
                 rt = (p1 / p0 - 1) * 100
                 rb = (b1 / b0 - 1) * 100
+                direcao = DIRECAO.get(r['acao_sugerida'])
                 obs[h].append({'semana': sem['data'], 'ticker': r['ticker'], 'posicao': r['posicao'], 'nota': r['nota'],
-                               'acao': r['acao_sugerida'], 'certeza': r['certeza'], 'retorno_pct': round(rt, 2),
+                               'acao': r['acao_sugerida'], 'certeza': r.get('certeza') or 'não informada', 'retorno_pct': round(rt, 2),
                                'ibovespa_pct': round(rb, 2), 'excesso_pp': round(rt - rb, 2),
-                               'upside_ajustado_pct': r.get('upside_ajustado_pct'), 'data_fim': d1.isoformat()})
+                               'upside_ajustado_pct': r.get('upside_ajustado_pct'), 'data_fim': d1.isoformat(),
+                               'direcao_esperada': direcao, 'veredito': veredito(direcao, rt - rb, BANDA_NEUTRA_PP[h]),
+                               'componentes': r.get('componentes')})
     return obs, pend
 
 
@@ -137,7 +179,24 @@ def agregar(obs_h):
     suficiente = len(obs_h) >= MIN_OBS and n_sem >= MIN_SEMANAS
     comprar = _resumo([o for o in obs_h if o['acao'] == 'comprar'])
     evitar = _resumo([o for o in obs_h if o['acao'] == 'evitar'])
-    return {'observacoes': len(obs_h), 'semanas': n_sem, 'amostra': 'suficiente' if suficiente else 'insuficiente',
+    por_veredito = {}
+    for o in obs_h:
+        por_veredito[o['veredito']] = por_veredito.get(o['veredito'], 0) + 1
+    direcionais = [o for o in obs_h if o['veredito'] in ('acerto', 'erro')]
+    rho_comp = {}
+    for c in COMPONENTES:
+        rs = []
+        for s in semanas:
+            o = [x for x in obs_h if x['semana'] == s and x.get('componentes') and c in x['componentes']]
+            rho = spearman([x['componentes'][c] for x in o], [x['excesso_pp'] for x in o])
+            if rho is not None:
+                rs.append(rho)
+        if rs:
+            rho_comp[c] = {'spearman_medio': round(statistics.fmean(rs), 3), 'semanas': len(rs)}
+    return {'observacoes': len(obs_h), 'semanas': n_sem, 'por_veredito': por_veredito,
+            'acerto_direcional_pct': (round(sum(o['veredito'] == 'acerto' for o in direcionais) / len(direcionais) * 100, 1)
+                                      if direcionais else None),
+            'spearman_por_componente': rho_comp, 'amostra': 'suficiente' if suficiente else 'insuficiente',
             'geral': _resumo(obs_h), 'por_acao': por('acao'), 'por_certeza': por('certeza'), 'por_posicao': ranking,
             'spearman_nota_excesso_medio': round(statistics.fmean(rhos), 3) if rhos else None, 'semanas_com_spearman': len(rhos),
             'spread_comprar_menos_evitar_pp': (round(comprar['excesso_medio_pp'] - evitar['excesso_medio_pp'], 2)

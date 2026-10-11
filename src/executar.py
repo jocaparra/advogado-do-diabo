@@ -13,6 +13,7 @@ sintese.json etc. na pasta. Este script só roda o que é cálculo, conferência
   6. gerar_graficos     figuras
   7. montar_relatorio   PDF (recusa gerar com erros; --forcar ignora)
   8. atualizar_historico registra o ranking da semana
+  9. aprender           portão de amostra e padrões (só informativo; nunca altera parâmetros)
 """
 import os
 import subprocess
@@ -47,6 +48,7 @@ def main():
     rodar('gerar_graficos.py', pasta)
     rodar('montar_relatorio.py', pasta, env={'CARTEIRA_FORCAR': '1'} if forcar else None)
     rodar('atualizar_historico.py', pasta)
+    rodar('aprender.py', pasta, extras=(), tolerar=True)
     print('\nconcluído:', os.path.join(pasta, 'relatorio.pdf'))
 
 
