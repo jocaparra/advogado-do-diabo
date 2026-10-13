@@ -69,6 +69,23 @@ def carregar_series(raiz):
     return series
 
 
+def carregar_dividendos(raiz):
+    """ticker -> {data_ex_iso: valor por ação}; semanas mais recentes sobrescrevem as antigas."""
+    divs = {}
+    for p in sorted(glob.glob(os.path.join(raiz, 'semana_*', 'precos.json'))):
+        for t, v in C.ler(p).get('acoes', {}).items():
+            for x in v.get('dividendos') or []:
+                if isinstance(x, list) and len(x) == 2:
+                    divs.setdefault(t, {})[x[0]] = x[1]
+    return divs
+
+
+def proventos(divs, ticker, d0, d1):
+    """Soma dos proventos por ação com data ex em (d0, d1]. Sem reinvestimento (aproximação conservadora)."""
+    return sum(v for d, v in (divs or {}).get(ticker, {}).items()
+               if _num(v) and d0.isoformat() < d <= d1.isoformat())
+
+
 def fechamento(serie, alvo, janela=JANELA_PRECO):
     """Último fechamento em `alvo` ou até `janela` dias antes. (None, None) se não houver."""
     d = alvo
@@ -104,7 +121,7 @@ def veredito(direcao, excesso_pp, banda):
     return 'inconclusivo'
 
 
-def avaliar_entradas(semanas, series, hoje):
+def avaliar_entradas(semanas, series, hoje, dividendos=None):
     """Lista de observações vencidas e contagem de pendentes, por horizonte."""
     obs = {h: [] for h in HORIZONTES}
     pend = {h: 0 for h in HORIZONTES}
@@ -143,11 +160,13 @@ def avaliar_entradas(semanas, series, hoje):
                 _, b1 = fechamento(ibov, alvo)
                 if not (_preco_ok(p1) and _preco_ok(b1)):
                     continue
-                rt = (p1 / p0 - 1) * 100
+                prov = proventos(dividendos, r['ticker'], d0, d1)
+                rt = ((p1 + prov) / p0 - 1) * 100  # retorno total, comparável ao Ibovespa
                 rb = (b1 / b0 - 1) * 100
                 direcao = DIRECAO.get(r['acao_sugerida'])
                 obs[h].append({'semana': sem['data'], 'ticker': r['ticker'], 'posicao': r['posicao'], 'nota': r['nota'],
                                'acao': r['acao_sugerida'], 'certeza': r.get('certeza') or 'não informada', 'retorno_pct': round(rt, 2),
+                               'proventos_pct': round(prov / p0 * 100, 2),
                                'ibovespa_pct': round(rb, 2), 'excesso_pp': round(rt - rb, 2),
                                'upside_ajustado_pct': r.get('upside_ajustado_pct'), 'data_fim': d1.isoformat(),
                                'direcao_esperada': direcao, 'veredito': veredito(direcao, rt - rb, BANDA_NEUTRA_PP[h]),
@@ -210,10 +229,11 @@ def avaliar(raiz, hoje=None):
         return None
     hist = C.ler(h)
     series = carregar_series(raiz)
-    obs, pend = avaliar_entradas(hist['semanas'], series, hoje)
+    obs, pend = avaliar_entradas(hist['semanas'], series, hoje, carregar_dividendos(raiz))
     saida = {'data_avaliacao': hoje.isoformat(), 'semanas_no_historico': len(hist['semanas']),
-             'metodo': 'retorno de preço (sem dividendos) do ticker contra o Ibovespa, da data da cotação da recomendação até +28 e +84 dias; '
-                       'Ibovespa é índice de retorno total, o que subestima o ticker em ~dividend yield',
+             'metodo': 'retorno total do ticker (preço mais dividendos e JCP com data ex no período, sem reinvestimento) contra o '
+                       'Ibovespa (índice de retorno total), da data da cotação da recomendação até +7, +28 e +84 dias; '
+                       'semanas coletadas antes desta correção não têm proventos gravados e ficam só com retorno de preço',
              'minimos_para_conclusao': {'observacoes': MIN_OBS, 'semanas': MIN_SEMANAS}, 'horizontes': {}}
     for hz in HORIZONTES:
         ag = agregar(obs[hz])

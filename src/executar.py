@@ -39,6 +39,9 @@ def main():
     sem_rede, forcar = '--sem-rede' in sys.argv, '--forcar' in sys.argv
     if not sem_rede:
         rodar('coletar_cvm.py', pasta)
+    elif not os.path.exists(os.path.join(pasta, 'fundamentos_cvm.json')):
+        sys.exit('--sem-rede precisa de fundamentos_cvm.json na pasta (de uma execução anterior): '
+                 'rode sem --sem-rede uma vez para baixar os dados da CVM')
     rodar('calcular_derivados.py', pasta)
     rodar('gerar_dossie.py', pasta)
     cod = rodar('conferir.py', pasta, tolerar=forcar)

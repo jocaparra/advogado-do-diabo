@@ -3,7 +3,8 @@
 uso: python src/precos_yahoo.py <pasta_da_semana> [TICKER ...]
 
 Sem tickers na linha de comando, lê os do xp.json (mensal mais recente). Inclui o Ibovespa (^BVSP).
-Fechamento sem ajuste por proventos, ajustado por desdobramentos (padrão do Yahoo). O último ponto
+Fechamento sem ajuste por proventos, ajustado por desdobramentos (padrão do Yahoo); os proventos
+comem em "dividendos" de cada ação, para o retorno total na avaliação. O último ponto
 pode ser intradiário se rodar durante o pregão: o aviso fica em precos.json (campo "notas").
 """
 import datetime as dt
@@ -15,7 +16,7 @@ import urllib.request
 
 import carteira as C
 
-URL = 'https://query1.finance.yahoo.com/v8/finance/chart/{simbolo}?range=1y&interval=1d'
+URL = 'https://query1.finance.yahoo.com/v8/finance/chart/{simbolo}?range=1y&interval=1d&events=div'
 
 
 def interpretar(payload):
@@ -34,6 +35,15 @@ def interpretar(payload):
         else:
             serie.append([d, round(c, 4)])
     return serie
+
+
+def interpretar_dividendos(payload):
+    """[[data_ex_iso, valor por ação], ...] de dividendos e JCP, na mesma base de desdobramentos da série."""
+    res = payload['chart']['result'][0]
+    off = res.get('meta', {}).get('gmtoffset', 0) or 0
+    eventos = (res.get('events') or {}).get('dividends') or {}
+    return sorted([(dt.datetime.fromtimestamp(e['date'], dt.timezone.utc) + dt.timedelta(seconds=off)).date().isoformat(),
+                   round(e['amount'], 6)] for e in eventos.values())
 
 
 def retornos(serie):
@@ -59,12 +69,14 @@ def baixar(simbolo):
 
 def coletar(tickers):
     out = {'fonte': 'Yahoo Finance (dados B3)', 'url_api': URL.split('{')[0],
-           'metodo': 'fechamento sem ajuste por proventos, ajustado por desdobramentos; série diária de 12 meses',
+           'metodo': 'fechamento sem ajuste por proventos, ajustado por desdobramentos; série diária de 12 meses; dividendos e JCP por data ex em "dividendos"',
            'data_coleta': dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'acoes': {}, 'sem_dado': [],
            'notas': ['Se coletado durante o pregão, o último ponto pode ser intradiário.']}
     for simbolo, destino in [('^BVSP', None)] + [(f'{t}.SA', t) for t in tickers]:
         try:
-            serie = interpretar(baixar(simbolo))
+            payload = baixar(simbolo)
+            serie = interpretar(payload)
+            divs = interpretar_dividendos(payload)
         except Exception as e:  # rede, ticker inexistente, formato novo
             if destino:
                 out['sem_dado'].append({'ticker': destino, 'motivo': str(e)[:120]})
@@ -74,7 +86,8 @@ def coletar(tickers):
         if not serie:
             out['sem_dado'].append({'ticker': destino or '^BVSP', 'motivo': 'série vazia'})
             continue
-        item = {'preco_atual': serie[-1][1], 'data_cotacao': serie[-1][0], **retornos(serie), 'serie': serie}
+        item = {'preco_atual': serie[-1][1], 'data_cotacao': serie[-1][0], **retornos(serie), 'serie': serie,
+                'dividendos': divs}
         if destino is None:
             out['ibovespa'] = item
         else:

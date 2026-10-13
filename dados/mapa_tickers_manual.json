@@ -1,5 +1,27 @@
 {
  "_comentario": "Correções manuais do mapeamento ticker -> CNPJ quando a FCA da CVM não lista o ticker. Conferir o CNPJ em dados abertos da CVM antes de acrescentar.",
- "BPAC11": {"cnpj": "30.306.294/0001-45", "nome": "BCO BTG PACTUAL S.A.", "valor_mobiliario": "Units", "segmento": "Nível 1",
-            "composicao_unit": "1 ação ordinária e 2 ações preferenciais", "fonte": "DFP 2025 da CVM (CNPJ) e prospecto das units"}
+ "BPAC11": {
+  "cnpj": "30.306.294/0001-45",
+  "nome": "BCO BTG PACTUAL S.A.",
+  "valor_mobiliario": "Units",
+  "segmento": "Nível 1",
+  "composicao_unit": "1 ação ordinária e 2 ações preferenciais",
+  "fonte": "DFP 2025 da CVM (CNPJ) e prospecto das units"
+ },
+ "CSNA3": {
+  "cnpj": "33.042.730/0001-04",
+  "nome": "CIA SIDERURGICA NACIONAL",
+  "valor_mobiliario": "Ações Ordinárias",
+  "segmento": "Nível 2 de Governança Corporativa",
+  "composicao_unit": "",
+  "fonte": "cadastro de companhias abertas da CVM (cad_cia_aberta.csv); ticker ausente da FCA"
+ },
+ "CMIN3": {
+  "cnpj": "08.902.291/0001-15",
+  "nome": "CSN MINERAÇÃO S.A.",
+  "valor_mobiliario": "Ações Ordinárias",
+  "segmento": "Novo Mercado",
+  "composicao_unit": "",
+  "fonte": "cadastro de companhias abertas da CVM (cad_cia_aberta.csv); ticker ausente da FCA"
+ }
 }

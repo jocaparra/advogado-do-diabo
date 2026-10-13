@@ -27,3 +27,4 @@ __pycache__/
 
 # aprendizado local: retrospectivas, memória e feedback (dados de execução, não versionados)
 /aprendizado/
+checagem/

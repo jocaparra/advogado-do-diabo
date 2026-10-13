@@ -156,6 +156,13 @@ Princípios: nenhum dado inventado (o que falta vira "não verificado"), toda in
 e data, só fontes de lista fechada, número calculável é calculado em código, e a opinião da XP
 não é tratada como verdade.
 
+## Trilha quantitativa (universo amplo e medição)
+
+Além do ranking da carteira da XP, o projeto calcula uma carteira própria do IBrX 100 com cinco fatores
+(valor, qualidade, momentum, dividendos e baixa volatilidade) e mede o resultado em 3, 6 e 12 meses
+contra o Ibovespa e o CDI. Roda à parte do fluxo semanal e não altera o ranking. Método e limites em
+[docs/QUANT.md](docs/QUANT.md).
+
 ## Cadência: PDF mensal, fontes semanais
 
 - **Uma vez por mês**, quando a XP publica o PDF novo, o agente `leitor` grava

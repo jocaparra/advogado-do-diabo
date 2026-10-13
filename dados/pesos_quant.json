@@ -1,0 +1,30 @@
+{
+ "_comentario": "Proposta de pesos da nota quantitativa. Status 'proposta': não altera o ranking semanal da XP até a aprovação explícita (regra de docs/APRENDIZADO.md).",
+ "status": "proposta",
+ "aprovado_por": null,
+ "fatores": {
+  "valor": 1.0,
+  "qualidade": 1.0,
+  "momentum": 1.0,
+  "dividendos": 1.0,
+  "baixa_vol": 1.0
+ },
+ "justificativa_fatores": "Pesos iguais: sem parâmetros estimados, simples de auditar e sem ajuste ao passado.",
+ "mistura_nota_xp": {
+  "quantitativa": 0.7,
+  "qualitativa": 0.3
+ },
+ "justificativa_mistura": "Convenção, não validada: catalisadores, notícias e macro/eleição não são testáveis no passado (sem histórico de julgamentos). Ficam com peso menor e limitado, e passam a ser medidos pelo medir_quant.py.",
+ "componentes_qualitativos": {
+  "catalisadores": 0.25,
+  "noticias": 0.2,
+  "macro_eleicao": 0.2
+ },
+ "carteira": {
+  "n_ativos": 12,
+  "max_por_setor": 3,
+  "pesos": "iguais",
+  "rebalanceamento": "mensal",
+  "observacao": "O teto por setor é regra de risco. N e pesos iguais são escolhas de simplicidade e diversificação."
+ }
+}
