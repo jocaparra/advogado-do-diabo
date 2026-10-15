@@ -117,3 +117,14 @@ class TesteCarteira(unittest.TestCase):
         m = M.medir_retrato(retrato, 91, {'AAA3': s}, s, {}, 0.0, hoje)
         self.assertAlmostEqual(m['carteira_pct'], round(100 * (10 + 91 * 0.01) / 10 - 100, 2), places=1)
         self.assertIsNone(M.medir_retrato(retrato, 365, {'AAA3': s}, s, {}, 0.0, dt.date(2026, 6, 1)))  # não venceu
+
+
+class TesteUniverso(unittest.TestCase):
+    def test_amplo_une_indices_sem_repetir_e_acrescenta_extras(self):
+        import carteira_quant as CQ
+        dados = {'IBRA': ['AAA3', 'BBB3'], 'SMLL': ['BBB3', 'CCC3']}
+        buscar = lambda i: {'data': '2026-10-15', 'itens': [{'ticker': t} for t in dados[i]]}
+        tick, desc = CQ.montar_universo(['amplo'], ['CCC3', 'XP11'], buscar)
+        self.assertEqual(tick, ['AAA3', 'BBB3', 'CCC3', 'XP11'])
+        self.assertIn('IBRA', desc)
+        self.assertIn('SMLL', desc)

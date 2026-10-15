@@ -1,7 +1,11 @@
 """Monta a carteira quantitativa de hoje: IBrX 100 pontuado por 5 fatores, N melhores, pesos iguais.
 
 uso: python src/carteira_quant.py [--n 12] [--por-setor 3] [--extra TICKER ...] [--semana semana_AAAAMMDD]
-                                  [--sem-salvar]
+                                  [--universo IBXX|amplo|IBOV,SMLL,...] [--sem-salvar]
+
+Universo: IBXX (padrão, IBrX 100, o da validação histórica), `amplo` (IBRA + SMLL: ~250 ações líquidas da
+bolsa) ou uma lista de índices da B3 separada por vírgula. Os papéis da carteira da XP (--semana) e os
+--extra entram sempre, mesmo fora do índice, e aparecem marcados com [XP]; a seleção não os favorece.
 
 Regras (dados/pesos_quant.json, status 'proposta'): composto de valor, qualidade, momentum, dividendos e
 baixa volatilidade com pesos iguais; as N melhores com pesos iguais; no máximo `por-setor` por setor
@@ -15,7 +19,6 @@ import datetime as dt
 import json
 import os
 import re
-import sys
 
 import cvm
 import fatores_quant as F
@@ -23,6 +26,21 @@ import quant_dados as Q
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PASTA_RETRATOS = os.path.join(RAIZ, 'aprendizado', 'quant')
+
+
+ATALHOS_UNIVERSO = {'AMPLO': ['IBRA', 'SMLL']}
+
+
+def montar_universo(indices, extras, buscar=Q.universo):
+    """([tickers], descrição): união dos índices na ordem dada, sem repetição, mais os papéis extras (XP)."""
+    nomes = [i for t in indices for i in ATALHOS_UNIVERSO.get(t.upper(), [t.upper()])]
+    base, datas = [], []
+    for ind in dict.fromkeys(nomes):
+        u = buscar(ind)
+        datas.append(f"{ind} de {u['data']}")
+        base += [i['ticker'] for i in u['itens']]
+    base = list(dict.fromkeys(base))
+    return base + [t for t in dict.fromkeys(extras) if t not in base], ' + '.join(datas)
 
 
 def carregar_pesos():
@@ -71,6 +89,7 @@ def main():
     ap.add_argument('--por-setor', type=int)
     ap.add_argument('--extra', nargs='*', default=[])
     ap.add_argument('--semana')
+    ap.add_argument('--universo', default='IBXX', help='IBXX (padrão), amplo ou índices da B3 separados por vírgula')
     ap.add_argument('--sem-salvar', action='store_true')
     a = ap.parse_args()
     cfg = carregar_pesos()
@@ -80,16 +99,16 @@ def main():
 
     hist_semana = None
     extras = [t.upper() for t in a.extra]
+    xp = set()
     if a.semana:
         h = os.path.join(os.path.dirname(os.path.abspath(a.semana)), 'historico_carteira.json')
         with open(h, encoding='utf-8') as f:
             semanas = json.load(f)['semanas']
         hist_semana = semanas[-1]
-        extras += [r['ticker'] for r in hist_semana['ranking']]
+        xp = {r['ticker'] for r in hist_semana['ranking']}
+        extras += sorted(xp)
 
-    uni = Q.universo('IBXX')
-    base = [i['ticker'] for i in uni['itens']]
-    tickers = base + [t for t in dict.fromkeys(extras) if t not in base]
+    tickers, desc_universo = montar_universo(a.universo.split(','), extras)
     ctx, sem = F.preparar(tickers, range(hoje.year - 2, hoje.year + 1), periodo='3y')
     ibov = Q.serie_yahoo('^BVSP', '3y')
     data = ibov['datas'][-1]
@@ -103,14 +122,15 @@ def main():
                  'peso_pct': round(100 / len(topo), 2), 'nota_quant': round(sc[c]['composto'] * 10, 2),
                  'fatores': {k: round(v, 2) for k, v in sc[c].items() if k != 'composto'},
                  'preco': fat[c]['preco']} for c in topo]
-    print(f"Carteira quantitativa em {data} (IBrX 100 de {uni['data']}; {len(sc)} empresas pontuadas, "
+    print(f"Carteira quantitativa em {data} ({desc_universo}; {len(sc)} empresas pontuadas, "
           f"{len(sem)} sem dado)\n")
     print(f"{'#':>2} {'ticker':7}{'nota':>6}{'peso%':>7}  {'valor':>6}{'qualid':>7}{'moment':>7}{'dividi':>7}{'vol':>6}  setor")
     for i, p in enumerate(carteira, 1):
+        p['na_xp'] = p['ticker'] in xp
         f = p['fatores']
         g = lambda k: f'{f[k]:.2f}' if k in f else '  -'
         print(f"{i:>2} {p['ticker']:7}{p['nota_quant']:6.2f}{p['peso_pct']:7.1f}  {g('valor'):>6}{g('qualidade'):>7}"
-              f"{g('momentum'):>7}{g('dividendos'):>7}{g('baixa_vol'):>6}  {(p['setor'] or '')[:40]}")
+              f"{g('momentum'):>7}{g('dividendos'):>7}{g('baixa_vol'):>6}  {(p['setor'] or '')[:40]}{' [XP]' if p['na_xp'] else ''}")
     fora = [r for r in ranking[:n] if r[0] not in topo]
     if fora:
         print('\nTop-' + str(n), 'barrados pelo teto de setor:', ', '.join(ctx[c]['ticker'] for c, _ in fora))
@@ -136,7 +156,7 @@ def main():
         os.makedirs(PASTA_RETRATOS, exist_ok=True)
         saida = os.path.join(PASTA_RETRATOS, f'carteira_{data}.json')
         with open(saida, 'w', encoding='utf-8') as f:
-            json.dump({'data': data, 'universo': f"IBrX 100 de {uni['data']}", 'parametros': {'n': n, 'por_setor': por_setor,
+            json.dump({'data': data, 'universo': desc_universo, 'parametros': {'n': n, 'por_setor': por_setor,
                        'fatores': cfg['fatores'], 'status_pesos': cfg['status']},
                        'carteira': carteira,
                        'ranking': [{'ticker': ctx[c]['ticker'], 'nota_quant': round(s * 10, 2)} for c, s in ranking],

@@ -2,3 +2,4 @@ matplotlib>=3.8
 numpy>=1.26
 reportlab>=4.0
 pymupdf>=1.24   # conversão de páginas do PDF em imagem (revisão visual e leitura)
+yfinance>=0.2.40   # múltiplos de mercado (coletar_yahoo.py)

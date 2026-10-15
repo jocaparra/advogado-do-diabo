@@ -12,6 +12,8 @@ estiver vazio, use a data de hoje no formato AAAAMMDD). Leia antes `docs/regras_
 2. **Coleta em paralelo.** Rode os agentes `precos`, `macro`, `noticias`, `casas`, `fluxo` e
    `fundamentos` (cada um grava seu JSON em `semana_AAAAMMDD/`). Para preços, prefira
    `python src/precos_yahoo.py semana_AAAAMMDD` e use o agente `precos` só para o que faltar.
+   Rode também `python src/coletar_yahoo.py semana_AAAAMMDD` (múltiplos P/L, P/VP, EV/EBITDA e yield em
+   `precos_yahoo.json`; dado do agregador, não conferido: cite como tal).
 3. **Números em código.** Rode, em ordem:
    `python src/coletar_cvm.py semana_AAAAMMDD` e `python src/calcular_derivados.py semana_AAAAMMDD`.
 4. **Síntese.** Rode os agentes `analista` (grava `sintese.json`) e `risco`. Depois
