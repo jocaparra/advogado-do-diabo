@@ -32,6 +32,12 @@ class TestePointInTime(unittest.TestCase):
         self.assertEqual(Q.estado_em(self.r, '2024-09-01')['ni_ttm'], 125.0)
         self.assertEqual(Q.estado_em(self.r, '2024-09-01')['pl'], 540.0)
 
+    def test_atraso_de_publicacao_adia_a_disponibilidade(self):
+        # o anual de 2023 foi recebido em 01/03/2024: com 30 dias de atraso só vale a partir de 31/03
+        self.assertIsNone(Q.estado_em(self.r, '2024-03-15', atraso_dias=30))
+        self.assertEqual(Q.estado_em(self.r, '2024-04-05', atraso_dias=30)['ni_ttm'], 100.0)
+        self.assertEqual(Q.estado_em(self.r, '2024-03-15')['ni_ttm'], 100.0)
+
     def test_sem_anual_anterior_nao_inventa(self):
         self.assertIsNone(Q.estado_em(self.r[1:], '2024-09-01')['ni_ttm'])
 

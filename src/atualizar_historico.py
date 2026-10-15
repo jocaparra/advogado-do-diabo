@@ -2,6 +2,7 @@
 
 uso: python src/atualizar_historico.py <pasta_da_semana>
 """
+import datetime
 import hashlib
 import json
 import os
@@ -60,3 +61,37 @@ hist['semanas'].sort(key=lambda s: s['data'])
 with open(caminho, 'w', encoding='utf-8') as f:
     json.dump(hist, f, ensure_ascii=False, indent=1)
 print('histórico atualizado:', caminho, f'({len(hist["semanas"])} semanas)')
+
+
+def arquivar_casas(pasta, data, ranking):
+    """Guarda o retrato da semana (casas, alvos, ratings e nota) em aprendizado/historico_casas/AAAA-MM-DD.json.
+
+    Serve para testar no futuro se revisões e mudanças de recomendação antecipam retorno: o que se sabia
+    na data, antes do resultado. Não sobrescreve um retrato existente (reexecuções vão para _revN)."""
+    casas = c.ler(os.path.join(pasta, 'casas.json'), {})
+    if not casas.get('tickers'):
+        return None
+    destino = os.path.join(os.path.dirname(pasta), 'aprendizado', 'historico_casas')
+    os.makedirs(destino, exist_ok=True)
+    arq = os.path.join(destino, f'{data}.json')
+    rev = 1
+    while os.path.exists(arq):
+        rev += 1
+        arq = os.path.join(destino, f'{data}_rev{rev}.json')
+    with open(arq, 'w', encoding='utf-8') as f:
+        json.dump({'data': data, 'registrado_em': datetime.datetime.now().isoformat(timespec='seconds'),
+                   'fonte': 'casas.json e sintese.json da semana, gravados antes do resultado',
+                   'casas': casas['tickers'],
+                   'ranking': [{k: r.get(k) for k in ('posicao', 'ticker', 'nota', 'acao_sugerida', 'certeza', 'preco_atual',
+                                                      'data_cotacao', 'upside_xp_pct', 'upside_mediana_pct',
+                                                      'upside_ajustado_pct', 'n_casas', 'rating_xp')} for r in ranking]},
+                  f, ensure_ascii=False, indent=1)
+    return arq
+
+
+try:  # o arquivo é um extra: falhar aqui nunca pode derrubar o registro da semana
+    _arq = arquivar_casas(pasta, data, sint['ranking'])
+    if _arq:
+        print('retrato das casas:', _arq)
+except OSError as e:
+    print('aviso: retrato das casas não gravado:', e)

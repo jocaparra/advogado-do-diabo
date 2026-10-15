@@ -35,6 +35,24 @@ class TestePrevisoes(unittest.TestCase):
             self.assertEqual(s['ranking'][0]['retorno_5d_pct'], 4.09)
             self.assertEqual(s['conclusoes'], ['c'])
 
+    def test_arquivo_das_casas_nao_sobrescreve(self):
+        with tempfile.TemporaryDirectory() as raiz:
+            pasta = os.path.join(raiz, 'semana_20261005')
+            os.makedirs(pasta)
+            with open(os.path.join(pasta, 'sintese.json'), 'w', encoding='utf-8') as f:
+                json.dump({'ranking': [r('AAA3', 'comprar')]}, f)
+            with open(os.path.join(pasta, 'xp.json'), 'w', encoding='utf-8') as f:
+                json.dump({'fonte': 'teste'}, f)
+            with open(os.path.join(pasta, 'casas.json'), 'w', encoding='utf-8') as f:
+                json.dump({'tickers': {'AAA3': {'casas': [{'casa': 'X', 'preco_alvo': 12.0}]}}}, f)
+            for _ in range(2):
+                p = subprocess.run([sys.executable, SCRIPT, pasta], capture_output=True, text=True)
+                self.assertEqual(p.returncode, 0, p.stderr)
+            pasta_h = os.path.join(raiz, 'aprendizado', 'historico_casas')
+            self.assertEqual(sorted(os.listdir(pasta_h)), ['2026-10-05.json', '2026-10-05_rev2.json'])
+            with open(os.path.join(pasta_h, '2026-10-05.json'), encoding='utf-8') as f:
+                self.assertEqual(json.load(f)['casas']['AAA3']['casas'][0]['preco_alvo'], 12.0)
+
 
 if __name__ == '__main__':
     unittest.main()

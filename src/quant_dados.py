@@ -240,9 +240,14 @@ def fundamentos_pit(cnpjs, anos):
     return out
 
 
-def estado_em(registros, data_iso):
-    """Fundamentos conhecidos em `data_iso`: {ni_ttm, pl, acoes, acoes_dt_refer, dt_refer} ou None."""
-    visiveis = [r for r in registros if r['dt_receb'] <= data_iso]
+def estado_em(registros, data_iso, atraso_dias=0):
+    """Fundamentos conhecidos em `data_iso`: {ni_ttm, pl, acoes, acoes_dt_refer, dt_refer} ou None.
+    `atraso_dias` adia a disponibilidade de cada demonstração (teste de sensibilidade à data de publicação)."""
+    if atraso_dias:
+        corte = (dt.date.fromisoformat(data_iso) - dt.timedelta(days=atraso_dias)).isoformat()
+    else:
+        corte = data_iso
+    visiveis = [r for r in registros if r['dt_receb'] <= corte]
     if not visiveis:
         return None
     ult = max(visiveis, key=lambda r: r['dt_refer'])

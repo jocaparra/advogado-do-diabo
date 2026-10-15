@@ -88,7 +88,7 @@ def _mercado(emp, est, preco):
     return cap
 
 
-def fatores_em(ctx, data_iso):
+def fatores_em(ctx, data_iso, atraso_dias=0):
     """{cnpj: {valor_ep, valor_bp, roe, momentum, dividendos, vol, preco}} das empresas com preço na data."""
     out = {}
     limite_div = (dt.date.fromisoformat(data_iso) - dt.timedelta(days=365)).isoformat()
@@ -103,7 +103,7 @@ def fatores_em(ctx, data_iso):
         rets = [math.log(adj[k] / adj[k - 1]) for k in range(i - 251, i + 1) if adj[k - 1] > 0 and adj[k] > 0]
         f['vol'] = statistics.pstdev(rets) if len(rets) > 200 else None
         f['dividendos'] = sum(v for d, v in s['div'].items() if limite_div < d <= data_iso) / preco
-        est = Q.estado_em(emp['registros'], data_iso) if emp['registros'] else None
+        est = Q.estado_em(emp['registros'], data_iso, atraso_dias) if emp['registros'] else None
         cap = _mercado(emp, est, preco) if est else None
         if est and cap:
             if est['ni_ttm'] is not None:
