@@ -20,7 +20,7 @@ import validar
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ARQ_SCHEMA = {'precos.json': 'precos', 'casas.json': 'casas', 'sintese.json': 'sintese', 'macro.json': 'macro',
               'risco.json': 'risco', 'alertas.json': 'alertas', 'fundamentos_cvm.json': 'fundamentos_cvm',
-              'textos.json': 'textos', 'dossie_qualitativo.json': 'dossie_qualitativo'}
+              'textos.json': 'textos', 'dossie_qualitativo.json': 'dossie_qualitativo', 'precos_yahoo.json': 'precos_yahoo'}
 TOL = {'upside_pp': 0.15, 'nota': 0.011, 'retorno_pp': 0.06, 'beta': 0.06, 'vol_pp': 1.0, 'preco': 0.005}
 
 
@@ -86,6 +86,77 @@ def beta_vol(acao, ibov, janela=90):
     return cov / var, statistics.stdev(ra) * math.sqrt(252) * 100
 
 
+def pesos_efetivos():
+    """(pesos, rótulo) da versão em vigor: `versao_atual` de dados/parametros_aprendidos.json; sem o arquivo,
+    a baseline (dados/horizontes.json, horizonte 'semanas'). É o que o analista deveria ter usado."""
+    import aprender
+    dados = aprender.carregar_versoes()
+    v = aprender.versao(dados)
+    return v['parametros']['pesos'], f"versão {v['versao']}: {v.get('motivo', '')[:60]}"
+
+
+def conferir_yahoo(rel, y, pr, ranking):
+    """Metadados e cobertura de precos_yahoo.json (dado de agregador: nunca vira fato verificado)."""
+    rel.ok()
+    if y.get('auditado') is not False:
+        rel.erro('yahoo_nao_auditado', 'precos_yahoo.json', 'o arquivo deve declarar auditado=false')
+    faltam = sorted({r['ticker'] for r in ranking} - set(y.get('acoes', {})))
+    rel.ok()
+    if faltam:
+        rel.aviso('yahoo_cobertura', 'precos_yahoo.json', 'tickers do ranking sem dado do Yahoo', encontrado=faltam)
+    aberto = sorted(t for t, v in y.get('acoes', {}).items() if v.get('mercado_aberto'))
+    rel.ok()
+    if aberto:
+        rel.aviso('yahoo_intradiario', 'precos_yahoo.json', 'cotação coletada com o pregão aberto (não é fechamento)',
+                  encontrado=aberto)
+    coleta = _data(y.get('data_coleta', ''))
+    cot = _data(((pr or {}).get('ibovespa') or {}).get('data_cotacao', ''))
+    rel.ok()
+    if coleta and cot and abs((coleta - cot).days) > 3:
+        rel.aviso('yahoo_defasagem', 'precos_yahoo.json',
+                  f'coletado em {coleta}, mas precos.json tem cotação de {cot}: dados de datas diferentes',
+                  esperado=str(cot), encontrado=str(coleta))
+
+
+ROTULO_YAHOO = 'não auditado'
+ARQ_COM_ROTULO = ('sintese.json', 'fundamentos.json', 'contra.json', 'textos.json', 'noticias.json', 'dossie_qualitativo.json')
+
+
+def _textos(obj, caminho=''):
+    """(caminho, texto) de todas as strings de um JSON."""
+    if isinstance(obj, str):
+        yield caminho, obj
+    elif isinstance(obj, dict):
+        for k, v in obj.items():
+            yield from _textos(v, f'{caminho}.{k}' if caminho else str(k))
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            yield from _textos(v, f'{caminho}[{i}]')
+
+
+def conferir_rotulo_yahoo(rel, pasta):
+    """Todo texto que cita o Yahoo deve carregar o rótulo "não auditado" (agregador, números não conferidos).
+    Exceção: a série de preços de precos.json (fechamento), que é dado de cotação e não múltiplo."""
+    for arq in ARQ_COM_ROTULO:
+        caminho_arq = os.path.join(pasta, arq)
+        if not os.path.exists(caminho_arq):
+            continue
+        try:
+            d = C.ler(caminho_arq)
+        except json.JSONDecodeError:
+            continue                        # JSON inválido já é erro da etapa de schema
+        for caminho, txt in _textos(d):
+            if 'yahoo' not in txt.lower():
+                continue
+            rel.ok()
+            baixa = txt.lower()
+            if ROTULO_YAHOO in baixa or 'precos.json' in baixa or 'fechamento' in baixa or 'chart' in baixa:
+                continue
+            if 'precos_yahoo.json' in baixa and not any(ch.isdigit() for ch in baixa):
+                continue                    # só cita o nome do arquivo, sem número
+            rel.aviso('rotulo_yahoo', arq, 'cita o Yahoo sem o rótulo "Yahoo, não auditado"', encontrado=f'{caminho}: {txt[:90]}')
+
+
 def conferir(pasta):
     rel = Relatorio()
     a, m, d = C.data_semana(pasta)
@@ -140,6 +211,10 @@ def conferir(pasta):
                 rel.erro('cobertura', f'{nome}', 'tickers diferentes do xp.json',
                          esperado=sorted(ref - s) or None, encontrado=sorted(s - ref) or None)
 
+    if 'precos_yahoo.json' in carregados and sy:
+        conferir_yahoo(rel, carregados['precos_yahoo.json'], pr, sy['ranking'])
+    conferir_rotulo_yahoo(rel, pasta)
+
     # 3. ranking
     if sy:
         rk = sy['ranking']
@@ -147,6 +222,12 @@ def conferir(pasta):
         rel.ok()
         if abs(sum(pesos.values()) - 1) > 1e-6:
             rel.erro('pesos', 'sintese.json', 'pesos da nota não somam 1', esperado=1, encontrado=sum(pesos.values()))
+        efetivos, rotulo = pesos_efetivos()
+        rel.ok()
+        if set(pesos) != set(efetivos) or any(abs(pesos[k] - efetivos[k]) > 1e-6 for k in efetivos if k in pesos):
+            rel.erro('pesos_versao', 'sintese.json',
+                     f'pesos da síntese diferem da versão efetiva ({rotulo}); mudança de pesos só por proposta aprovada '
+                     '(python src/aprender.py)', esperado=efetivos, encontrado=pesos)
         rel.ok()
         if [r['posicao'] for r in rk] != list(range(1, len(rk) + 1)):
             rel.erro('posicoes', 'sintese.json', 'posições não são 1..N em sequência')

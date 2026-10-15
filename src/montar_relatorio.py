@@ -414,18 +414,21 @@ def _pagina_avaliacao():
     hz = AVAL.get('horizontes', {})
     if not any(h.get('observacoes') for h in hz.values()):
         return []
-    rows = [['Horizonte', 'Ação sugerida', 'Observações', 'Excesso médio contra o Ibovespa', 'Acerto (bateu o Ibovespa)']]
+    rows = [['Horizonte', 'Ação sugerida', 'Observações', 'Excesso médio contra o Ibovespa', 'Acima do Ibovespa', 'Acerto da previsão']]
     notas = []
     for nome, h in hz.items():
         rot = nome.replace('_', ' ')
         for ac, v in h.get('por_acao', {}).items():
             rows.append([rot, ac.capitalize(), str(v['n']), col(fmt(v['excesso_medio_pp'], 2, False, True) + ' pp', v['excesso_medio_pp']),
-                         f"{fmt(v['acerto_pct'], 0)}%".replace('%%', '%')])
+                         f"{fmt(v['acima_ibov_pct'], 0)}%".replace('%%', '%') if v.get('acima_ibov_pct') is not None else 'n/d',
+                         f"{fmt(v['acerto_pct'], 0)}%".replace('%%', '%') if v.get('acerto_pct') is not None else 'n/d'])
         if h.get('observacoes'):
             sp = h.get('spearman_nota_excesso_medio')
             notas.append(f"{rot}: {h['observacoes']} observações em {h['semanas']} semana(s), amostra {h['amostra']}; "
                          f"correlação de postos entre nota e excesso de retorno: {fmt(sp, 2) if sp is not None else 'não definida'}.")
-    corpo = [tbl(rows, [150, 150, 110, 260, 234], ['L', 'L', 'R', 'R', 'R'], pad=2), Spacer(1, 6)]
+    corpo = [tbl(rows, [130, 130, 90, 220, 170, 164], ['L', 'L', 'R', 'R', 'R', 'R'], pad=2), Spacer(1, 6)]
+    if AVAL.get('avaliacao_incompleta'):
+        notas.append('AVALIAÇÃO INCOMPLETA: ' + AVAL.get('aviso_proventos', 'faltam proventos em parte das observações.'))
     corpo += bullets(notas) + [Spacer(1, 4), P('Método: ' + AVAL.get('metodo', '') + '. Com amostra insuficiente, nada disso é evidência de que a nota funciona.', SMALL)]
     return page('Desempenho das recomendações anteriores', 'Retorno contra o Ibovespa 1, 4 e 12 semanas depois de cada recomendação',
                 'historico_carteira.json, séries de preço (Yahoo Finance), cálculo do agente', corpo, fixed=False)

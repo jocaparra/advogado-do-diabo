@@ -69,15 +69,54 @@ def carregar_series(raiz):
     return series
 
 
-def carregar_dividendos(raiz):
-    """ticker -> {data_ex_iso: valor por ação}; semanas mais recentes sobrescrevem as antigas."""
-    divs = {}
+def _data_coleta(d):
+    """Data (iso) da coleta de um precos.json, ou None."""
+    txt = str(d.get('data_coleta') or '')[:10]
+    try:
+        return dt.date.fromisoformat(txt).isoformat()
+    except ValueError:
+        return None
+
+
+def carregar_proventos(raiz):
+    """(divs, cobertura) de todas as semanas.
+
+    divs: ticker -> {data_ex_iso: valor por ação}. cobertura: ticker -> (ate, ate_verificado): proventos
+    conhecidos até `ate` (iso) e confirmados em segunda fonte até `ate_verificado` ('' se nunca). Vem de precos.json com a chave `dividendos` (coletados pelo precos_yahoo.py,
+    fonte única, não verificada) e de proventos.json (coletar_proventos.py), só dos tickers cuja série foi
+    CONFIRMADA em segunda fonte. Semanas coletadas sem a chave não dão cobertura."""
+    divs, cob = {}, {}
+
+    def cobrir(t, ate, verificado):
+        qualquer, verif = cob.get(t, ('', ''))
+        cob[t] = (max(qualquer, ate), max(verif, ate) if verificado else verif)
+
     for p in sorted(glob.glob(os.path.join(raiz, 'semana_*', 'precos.json'))):
-        for t, v in C.ler(p).get('acoes', {}).items():
-            for x in v.get('dividendos') or []:
+        d = C.ler(p)
+        coleta = _data_coleta(d)
+        for t, v in d.get('acoes', {}).items():
+            if not isinstance(v.get('dividendos'), list):
+                continue
+            for x in v['dividendos']:
                 if isinstance(x, list) and len(x) == 2:
                     divs.setdefault(t, {})[x[0]] = x[1]
-    return divs
+            if coleta:
+                cobrir(t, coleta, False)
+    for p in sorted(glob.glob(os.path.join(raiz, 'semana_*', 'proventos.json'))):
+        d = C.ler(p)
+        for t, v in (d.get('por_ticker') or {}).items():
+            if (v.get('verificacao') or {}).get('status') != 'confirmado' or not v.get('coberto_ate'):
+                continue
+            for x in v.get('eventos') or []:
+                if isinstance(x, list) and len(x) == 2:
+                    divs.setdefault(t, {})[x[0]] = x[1]
+            cobrir(t, v['coberto_ate'], True)
+    return divs, cob
+
+
+def carregar_dividendos(raiz):
+    """ticker -> {data_ex_iso: valor por ação} (sem a cobertura; veja carregar_proventos)."""
+    return carregar_proventos(raiz)[0]
 
 
 def proventos(divs, ticker, d0, d1):
@@ -121,8 +160,12 @@ def veredito(direcao, excesso_pp, banda):
     return 'inconclusivo'
 
 
-def avaliar_entradas(semanas, series, hoje, dividendos=None):
-    """Lista de observações vencidas e contagem de pendentes, por horizonte."""
+def avaliar_entradas(semanas, series, hoje, dividendos=None, cobertura=None):
+    """Lista de observações vencidas e contagem de pendentes, por horizonte.
+
+    `cobertura` (ticker -> (ate, ate_verificado), de carregar_proventos) diz até quando os proventos do ticker são
+    conhecidos: uma observação cujo fim da janela passa dessa data fica com `proventos_completos=False` (retorno
+    só de preço, não comparável ao Ibovespa de retorno total). Sem `cobertura`, assume-se completo."""
     obs = {h: [] for h in HORIZONTES}
     pend = {h: 0 for h in HORIZONTES}
     ibov = series.get('^BVSP', {})
@@ -161,12 +204,19 @@ def avaliar_entradas(semanas, series, hoje, dividendos=None):
                 if not (_preco_ok(p1) and _preco_ok(b1)):
                     continue
                 prov = proventos(dividendos, r['ticker'], d0, d1)
+                if cobertura is None:
+                    completos, verificados = True, False
+                else:
+                    ate, ate_verif = cobertura.get(r['ticker'], ('', ''))
+                    completos = bool(ate and ate >= d1.isoformat())
+                    verificados = bool(ate_verif and ate_verif >= d1.isoformat())
                 rt = ((p1 + prov) / p0 - 1) * 100  # retorno total, comparável ao Ibovespa
                 rb = (b1 / b0 - 1) * 100
                 direcao = DIRECAO.get(r['acao_sugerida'])
                 obs[h].append({'semana': sem['data'], 'ticker': r['ticker'], 'posicao': r['posicao'], 'nota': r['nota'],
                                'acao': r['acao_sugerida'], 'certeza': r.get('certeza') or 'não informada', 'retorno_pct': round(rt, 2),
-                               'proventos_pct': round(prov / p0 * 100, 2),
+                               'proventos_pct': round(prov / p0 * 100, 2), 'proventos_completos': completos,
+                               'proventos_verificados': verificados,
                                'ibovespa_pct': round(rb, 2), 'excesso_pp': round(rt - rb, 2),
                                'upside_ajustado_pct': r.get('upside_ajustado_pct'), 'data_fim': d1.isoformat(),
                                'direcao_esperada': direcao, 'veredito': veredito(direcao, rt - rb, BANDA_NEUTRA_PP[h]),
@@ -175,11 +225,18 @@ def avaliar_entradas(semanas, series, hoje, dividendos=None):
 
 
 def _resumo(lista):
+    """Resumo de um grupo de observações.
+
+    `acima_ibov_pct`: % com excesso > 0 (independe da previsão). `acerto_pct`: acertos / (acertos + erros)
+    direcionais; None quando o grupo não tem previsão direcional (ex.: só "aguardar"). Para "evitar", acertar
+    é cair abaixo do Ibovespa, então os dois números são opostos."""
     if not lista:
         return {'n': 0}
     ex = [o['excesso_pp'] for o in lista]
+    dir_ = [o for o in lista if o.get('veredito') in ('acerto', 'erro')]
     return {'n': len(lista), 'excesso_medio_pp': round(statistics.fmean(ex), 2), 'excesso_mediano_pp': round(statistics.median(ex), 2),
-            'acerto_pct': round(sum(e > 0 for e in ex) / len(ex) * 100, 1),
+            'acima_ibov_pct': round(sum(e > 0 for e in ex) / len(ex) * 100, 1),
+            'acerto_pct': round(sum(o['veredito'] == 'acerto' for o in dir_) / len(dir_) * 100, 1) if dir_ else None,
             'retorno_medio_pct': round(statistics.fmean(o['retorno_pct'] for o in lista), 2)}
 
 
@@ -212,7 +269,10 @@ def agregar(obs_h):
                 rs.append(rho)
         if rs:
             rho_comp[c] = {'spearman_medio': round(statistics.fmean(rs), 3), 'semanas': len(rs)}
+    sem_prov = sum(not o.get('proventos_completos', True) for o in obs_h)
+    nao_verif = sum(o.get('proventos_completos', True) and not o.get('proventos_verificados', False) for o in obs_h)
     return {'observacoes': len(obs_h), 'semanas': n_sem, 'por_veredito': por_veredito,
+            'proventos': {'completo': sem_prov == 0, 'obs_sem_cobertura': sem_prov, 'obs_fonte_unica': nao_verif},
             'acerto_direcional_pct': (round(sum(o['veredito'] == 'acerto' for o in direcionais) / len(direcionais) * 100, 1)
                                       if direcionais else None),
             'spearman_por_componente': rho_comp, 'amostra': 'suficiente' if suficiente else 'insuficiente',
@@ -229,16 +289,26 @@ def avaliar(raiz, hoje=None):
         return None
     hist = C.ler(h)
     series = carregar_series(raiz)
-    obs, pend = avaliar_entradas(hist['semanas'], series, hoje, carregar_dividendos(raiz))
+    divs, cobertura = carregar_proventos(raiz)
+    obs, pend = avaliar_entradas(hist['semanas'], series, hoje, divs, cobertura)
     saida = {'data_avaliacao': hoje.isoformat(), 'semanas_no_historico': len(hist['semanas']),
              'metodo': 'retorno total do ticker (preço mais dividendos e JCP com data ex no período, sem reinvestimento) contra o '
                        'Ibovespa (índice de retorno total), da data da cotação da recomendação até +7, +28 e +84 dias; '
-                       'semanas coletadas antes desta correção não têm proventos gravados e ficam só com retorno de preço',
+                       'observações sem cobertura de proventos até o fim da janela ficam só com retorno de preço e são contadas em '
+                       '"proventos.obs_sem_cobertura" (a avaliação fica marcada como incompleta)',
              'minimos_para_conclusao': {'observacoes': MIN_OBS, 'semanas': MIN_SEMANAS}, 'horizontes': {}}
     for hz in HORIZONTES:
         ag = agregar(obs[hz])
         ag['pendentes'] = pend[hz]
         saida['horizontes'][hz] = ag
+    incompletos = {hz: ag['proventos']['obs_sem_cobertura'] for hz, ag in saida['horizontes'].items()
+                   if ag['proventos']['obs_sem_cobertura']}
+    saida['avaliacao_incompleta'] = bool(incompletos)
+    if incompletos:
+        saida['aviso_proventos'] = ('observações sem proventos conhecidos até o fim da janela têm retorno só de preço, contra um '
+                                    'Ibovespa de retorno total: o excesso delas está subestimado. Colete com precos_yahoo.py ou '
+                                    'coletar_proventos.py; enquanto isso, não use este resultado como conclusão. '
+                                    f'Observações sem cobertura por horizonte: {incompletos}')
     saida['observacoes'] = {hz: obs[hz] for hz in HORIZONTES}
     return saida
 
@@ -257,10 +327,13 @@ def main():
         if not ag['observacoes']:
             print(f'  {hz}: sem observações vencidas ({ag["pendentes"]} pendentes)')
             continue
-        print(f'  {hz}: {ag["observacoes"]} obs em {ag["semanas"]} semanas, amostra {ag["amostra"]}; excesso médio {g["excesso_medio_pp"]:+.2f} pp, acerto {g["acerto_pct"]}%')
+        print(f'  {hz}: {ag["observacoes"]} obs em {ag["semanas"]} semanas, amostra {ag["amostra"]}; excesso médio {g["excesso_medio_pp"]:+.2f} pp, acima do Ibovespa em {g["acima_ibov_pct"]}% das vezes')
         for k, v in ag['por_acao'].items():
-            print(f'      {k:9} n={v["n"]:3} excesso {v["excesso_medio_pp"]:+.2f} pp, acerto {v["acerto_pct"]}%')
+            ac = 'n/a' if v['acerto_pct'] is None else f'{v["acerto_pct"]}%'
+            print(f'      {k:9} n={v["n"]:3} excesso {v["excesso_medio_pp"]:+.2f} pp, acima do Ibovespa {v["acima_ibov_pct"]}%, acerto da previsão {ac}')
         print(f'      Spearman nota x excesso (média das semanas): {ag["spearman_nota_excesso_medio"]}')
+    if r.get('avaliacao_incompleta'):
+        print('  AVALIAÇÃO INCOMPLETA:', r['aviso_proventos'])
 
 
 if __name__ == '__main__':

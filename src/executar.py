@@ -6,7 +6,7 @@ Pré-requisito: os agentes de coleta e análise já gravaram precos.json, casas.
 sintese.json etc. na pasta. Este script só roda o que é cálculo, conferência e montagem:
 
   1. coletar_cvm        fundamentos da CVM (pula com --sem-rede e reaproveita fundamentos_cvm.json)
-     coletar_yahoo      múltiplos de mercado do Yahoo em precos_yahoo.json (informativo; pula com --sem-rede)
+     (precos_yahoo.json é coletado uma vez, antes dos agentes, por coletar_yahoo.py; aqui só se verifica)
   2. calcular_derivados medianas, upsides, nota e posição pela regra única
   3. gerar_dossie       valuation por cenários e checklist setorial
   4. conferir           schemas e recálculo de números (erros interrompem)
@@ -38,6 +38,17 @@ def rodar(script, pasta=None, extras=(), tolerar=False, env=None):
     return r.returncode
 
 
+def verificar_yahoo(pasta):
+    """Não coleta: os agentes já leram precos_yahoo.json da pasta, e recoletar depois deles faria o relatório
+    divergir do que foi analisado. A validação de schema e de metadados fica no conferir.py."""
+    arq = os.path.join(pasta, 'precos_yahoo.json')
+    if os.path.exists(arq):
+        print(f'\nprecos_yahoo.json presente (coletado antes dos agentes); validado pelo conferir.py')
+    else:
+        print('\naviso: precos_yahoo.json ausente: múltiplos de mercado do Yahoo não entram nesta semana. '
+              f'Rode `python src/coletar_yahoo.py {os.path.basename(pasta)}` antes dos agentes (passo 2 do /semana).')
+
+
 def complementos(sem_rede, sem_notificar):
     """Medição quant e checagem das posições: informativas, nunca interrompem nem alteram o ranking."""
     if sem_rede:
@@ -63,10 +74,10 @@ def main():
     sem_rede, forcar = '--sem-rede' in sys.argv, '--forcar' in sys.argv
     if not sem_rede:
         rodar('coletar_cvm.py', pasta)
-        rodar('coletar_yahoo.py', pasta, tolerar=True)
     elif not os.path.exists(os.path.join(pasta, 'fundamentos_cvm.json')):
         sys.exit('--sem-rede precisa de fundamentos_cvm.json na pasta (de uma execução anterior): '
                  'rode sem --sem-rede uma vez para baixar os dados da CVM')
+    verificar_yahoo(pasta)
     rodar('calcular_derivados.py', pasta)
     rodar('gerar_dossie.py', pasta)
     cod = rodar('conferir.py', pasta, tolerar=forcar)

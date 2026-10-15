@@ -4,7 +4,9 @@ uso: python src/medir_quant.py [--custo 0.15]
 
 Para cada retrato em aprendizado/quant/carteira_*.json, calcula o retorno total (preço mais proventos,
 comprar e segurar com pesos iguais, sem rebalancear) até +91, +182 e +365 dias, contra o Ibovespa e o CDI,
-e agrega por horizonte. O custo de entrada (por lado, sobre a carteira inteira) é descontado.
+e agrega por horizonte. O custo por lado (padrão 0,15%, o mesmo de backtest_quant.py) é descontado na entrada
+E na saída, sobre a carteira inteira, porque o retorno só se realiza vendendo; o backtest também cobra os dois
+lados, sobre o giro. Impostos não entram.
 Retratos mensais se sobrepõem em janelas longas: a amostra efetiva é menor que a contagem. Abaixo de
 12 retratos vencidos por horizonte o resultado é marcado como insuficiente.
 Grava aprendizado/quant/medicao.json. Não é recomendação de investimento.
@@ -48,7 +50,7 @@ def medir_retrato(retrato, horizonte_dias, series, ibov, cdi, custo_pct, hoje):
         if not a0 or not a1:
             return None
         rets.append(a1 / a0 - 1)
-    cart = statistics.fmean(rets) - custo_pct / 100
+    cart = statistics.fmean(rets) - 2 * custo_pct / 100  # entrada + saída, subtrativo como em backtest_quant
     b0, b1 = _em(ibov, ini, 'close'), _em(ibov, fim, 'close')
     bench = b1 / b0 - 1
     cdi_r = math.prod(1 + v for d, v in cdi.items() if ini < d <= fim) - 1
@@ -59,7 +61,7 @@ def medir_retrato(retrato, horizonte_dias, series, ibov, cdi, custo_pct, hoje):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--custo', type=float, default=0.15, help='%% por lado, cobrado uma vez na entrada')
+    ap.add_argument('--custo', type=float, default=0.15, help='%% por lado, cobrado na entrada e na saída (igual ao backtest)')
     a = ap.parse_args()
     hoje = dt.date.today()
     arquivos = sorted(glob.glob(os.path.join(PASTA, 'carteira_*.json')))
@@ -71,8 +73,8 @@ def main():
     ibov = Q.serie_yahoo('^BVSP', '3y')
     cdi = Q.cdi_diario(dt.date.fromisoformat(retratos[0]['data']) - dt.timedelta(days=7), hoje)
 
-    saida = {'data_medicao': hoje.isoformat(), 'retratos': len(retratos), 'custo_entrada_pct': a.custo, 'horizontes': {}}
-    print(f'{len(retratos)} retrato(s) de {retratos[0]["data"]} a {retratos[-1]["data"]}; custo de entrada {a.custo}%\n')
+    saida = {'data_medicao': hoje.isoformat(), 'retratos': len(retratos), 'custo_por_lado_pct': a.custo, 'custos': 'entrada e saída, sobre a carteira inteira', 'horizontes': {}}
+    print(f'{len(retratos)} retrato(s) de {retratos[0]["data"]} a {retratos[-1]["data"]}; custo {a.custo}% por lado (entrada e saída)\n')
     for nome, dias in HORIZONTES.items():
         obs, pend = [], []
         for r in retratos:

@@ -41,10 +41,15 @@ recomendação de investimento: leia [AVISO_LEGAL.md](AVISO_LEGAL.md).
 
    Ou com uma data: `/semana 20261012`. O comando executa os agentes de `.claude/agents/` e os
    scripts de `src/` na ordem certa, e termina com um resumo e o caminho do PDF.
-4. Para refazer só a parte numérica (sem agentes): `python src/executar.py semana_AAAAMMDD`.
+4. Para refazer só a parte numérica (sem agentes): `python src/executar.py semana_AAAAMMDD`. Ele não recoleta o
+   Yahoo (os agentes e o PDF precisam ver o mesmo `precos_yahoo.json`); roda a medição quant e a checagem das
+   posições no fim, ambas informativas.
+5. Proventos conferidos em segunda fonte (brapi) exigem `BRAPI_TOKEN` para cobrir todos os tickers; sem ele a
+   avaliação fica marcada como incompleta nas observações sem cobertura (`avaliacao.json`).
 
 ### O que o comando faz, em ordem
-`leitor` (mensal) → coleta (`precos`, `macro`, `noticias`, `casas`, `fluxo`, `fundamentos`) →
+`leitor` (mensal) → coleta (`precos`, `macro`, `noticias`, `casas`, `fluxo`, `fundamentos`; mais
+`coletar_yahoo.py` e `coletar_proventos.py`, **uma vez, antes dos agentes**) →
 `coletar_cvm` e `calcular_derivados` → `analista` e `risco` → `advogado` e `auditor` →
 `conferir` → `gerar_dossie` → `grafico` e `relator` → `avaliar`, `montar_relatorio` e
 `atualizar_historico`.

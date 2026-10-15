@@ -314,7 +314,12 @@ def _obs(pasta):
     r = A.avaliar(raiz)
     if r is None:
         sys.exit('historico_carteira.json não encontrado ao lado das pastas de semana')
-    return r['observacoes'][HORIZONTE], r
+    todas = r['observacoes'][HORIZONTE]
+    obs = [o for o in todas if o.get('proventos_completos', True)]  # retorno só de preço não é comparável ao Ibovespa
+    if len(obs) < len(todas):
+        print(f'aviso: {len(todas) - len(obs)} de {len(todas)} observações ({HORIZONTE}) fora do aprendizado por falta '
+              'de proventos até o fim da janela (veja avaliacao.json)')
+    return obs, r
 
 
 def _salvar_proposta(p):
@@ -367,8 +372,12 @@ def main(argv=None):
             g = portao(obs)
             print(f'portão de amostra ({HORIZONTE}): {"ABERTO" if g["aberto"] else "FECHADO"}; {g["observacoes_usaveis"]} obs com componentes '
                   f'em {g["semanas"]} semana(s) (mínimo {g["minimo"]["observacoes"]} em {g["minimo"]["semanas"]})')
-            ag = aval['horizontes'][HORIZONTE]
-            print(f'  vereditos: {ag["por_veredito"] or "nenhum vencido"}; acerto direcional: {ag["acerto_direcional_pct"]}')
+            ver = {}
+            for o in obs:                       # só as observações que o aprendizado usa (com proventos conhecidos)
+                ver[o['veredito']] = ver.get(o['veredito'], 0) + 1
+            direc = ver.get('acerto', 0) + ver.get('erro', 0)
+            acerto = round(100 * ver.get('acerto', 0) / direc, 1) if direc else None
+            print(f'  vereditos: {ver or "nenhum vencido"}; acerto direcional: {acerto}')
             rec = erros_recorrentes(obs)
             print('  erros recorrentes: ' + (', '.join(f'{t} ({len(s)} semanas)' for t, s in rec.items()) or 'nenhum'))
             for c, v in padroes(obs)['componentes'].items():

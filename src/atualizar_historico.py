@@ -56,6 +56,11 @@ entrada = {
     'conclusoes': sint.get('conclusoes_semana'),
     'alertas': [{k: a_.get(k) for k in ('ticker', 'nivel', 'fato', 'data')} for a_ in alertas.get('alertas', [])],
 }
+decisao = c.ler(os.path.join(pasta, 'decisao_sombra.json'), {})
+if decisao.get('modo') == 'sombra':      # só o registro, para comparar depois; não afeta ranking nem avaliação
+    entrada['decisao_sombra'] = {'ranking_confiavel': decisao.get('ranking_confiavel'),
+                                 'acoes': {d['ticker']: {'acao': d.get('acao'), 'confianca': d.get('confianca')}
+                                           for d in decisao.get('decisoes', []) if isinstance(d, dict) and d.get('ticker')}}
 hist['semanas'] = [s for s in hist['semanas'] if s['data'] != data] + [entrada]
 hist['semanas'].sort(key=lambda s: s['data'])
 with open(caminho, 'w', encoding='utf-8') as f:

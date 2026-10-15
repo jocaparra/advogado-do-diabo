@@ -151,3 +151,53 @@ class TesteAvaliacao(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TesteAcertoERoteamento(unittest.TestCase):
+    """Regressões da auditoria: rótulo de acerto e cobertura de proventos."""
+
+    def obs(self, acao, excesso, veredito):
+        return {'semana': 's', 'ticker': 'X', 'posicao': 1, 'nota': 5, 'acao': acao, 'certeza': 'alta', 'retorno_pct': excesso,
+                'proventos_pct': 0, 'ibovespa_pct': 0, 'excesso_pp': excesso, 'veredito': veredito, 'componentes': None}
+
+    def test_evitar_que_caiu_e_acerto_nao_zero(self):
+        r = A.agregar([self.obs('evitar', -5.0, 'acerto')])['por_acao']['evitar']
+        self.assertEqual(r['acerto_pct'], 100.0)   # antes saía 0.0: era "% acima do Ibovespa"
+        self.assertEqual(r['acima_ibov_pct'], 0.0)
+
+    def test_aguardar_sem_previsao_direcional_nao_tem_acerto(self):
+        r = A.agregar([self.obs('aguardar', 1.0, 'neutro_confirmado')])['por_acao']['aguardar']
+        self.assertIsNone(r['acerto_pct'])
+
+    def test_sem_cobertura_de_proventos_marca_incompleta(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            TesteAvaliacao().monta(tmp)   # precos.json sem a chave `dividendos`
+            r = A.avaliar(tmp, hoje=dt.date(2026, 7, 1))
+            self.assertTrue(r['avaliacao_incompleta'])
+            self.assertEqual(r['horizontes']['4_semanas']['proventos']['obs_sem_cobertura'], 2)
+            self.assertFalse(r['observacoes']['4_semanas'][0]['proventos_completos'])
+
+    def test_cobertura_vem_do_precos_json_e_do_sidecar_confirmado(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            TesteAvaliacao().monta(tmp)
+            pasta = os.path.join(tmp, 'semana_20260601')
+            p = json.load(open(os.path.join(pasta, 'precos.json')))
+            p['data_coleta'] = '2026-06-30 10:00:00'
+            p['acoes']['AAA3']['dividendos'] = [['2026-02-10', 0.5]]
+            json.dump(p, open(os.path.join(pasta, 'precos.json'), 'w'))
+            json.dump({'por_ticker': {
+                'BBB3': {'eventos': [['2026-02-15', 0.2]], 'coberto_ate': '2026-06-30', 'verificacao': {'status': 'confirmado'}},
+                'CCC3': {'eventos': [['2026-02-15', 9.9]], 'coberto_ate': '2026-06-30', 'verificacao': {'status': 'divergente'}}}},
+                open(os.path.join(pasta, 'proventos.json'), 'w'))
+            divs, cob = A.carregar_proventos(tmp)
+            self.assertEqual(cob['AAA3'], ('2026-06-30', ''))          # fonte única: cobre, mas não verificado
+            self.assertEqual(cob['BBB3'], ('2026-06-30', '2026-06-30'))
+            self.assertNotIn('CCC3', cob)                              # divergente não vale
+            self.assertNotIn('CCC3', divs)
+            r = A.avaliar(tmp, hoje=dt.date(2026, 7, 1))
+            h = r['horizontes']['4_semanas']['proventos']
+            self.assertEqual(h['obs_sem_cobertura'], 0)
+            self.assertEqual(h['obs_fonte_unica'], 1)                  # AAA3
+            self.assertFalse(r['avaliacao_incompleta'])
+            ob = {o['ticker']: o for o in r['observacoes']['4_semanas']}
+            self.assertGreater(ob['AAA3']['proventos_pct'], 0)
