@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Advogado do Diabo · Catálogo</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="catalogo.css">
+<link rel="stylesheet" href="chat.css">
+<script src="tema.js"></script>
+</head>
+<body>
+<script src="icones.js"></script>
+
+<div class="top"><div class="wrap">
+  <div class="brand"><span class="mark"><svg class="i"><use href="#scale"/></svg></span>Advogado do Diabo</div>
+  <div class="seg" role="group" aria-label="Tema">
+    <button type="button" id="t-dark" aria-pressed="false">Escuro</button>
+    <button type="button" id="t-light" aria-pressed="true">Claro</button>
+  </div>
+</div></div>
+
+<div class="wrap">
+<div class="intro">
+  <h1>Catálogo de componentes.</h1>
+  <p>Base visual do app. Os números e nomes desta página são exemplos para conferir os componentes, não análises reais.</p>
+  <div class="legal"><svg class="i"><use href="#alert"/></svg><div><b>Projeto independente, sem vínculo com a XP.</b> Não é recomendação de investimento.</div></div>
+</div>
+
+<section>
+  <h2>Cor</h2>
+  <div class="grid sw">
+    <div class="chipc"><i style="background:var(--bg)"></i><div>Canvas<code>--bg</code></div></div>
+    <div class="chipc"><i style="background:var(--surface)"></i><div>Superfície<code>--surface</code></div></div>
+    <div class="chipc"><i style="background:var(--elevated)"></i><div>Elevado<code>--elevated</code></div></div>
+    <div class="chipc"><i style="background:var(--line)"></i><div>Borda<code>--line</code></div></div>
+    <div class="chipc"><i style="background:var(--fg)"></i><div>Texto<code>--fg</code></div></div>
+    <div class="chipc"><i style="background:var(--muted)"></i><div>Texto suave<code>--muted</code></div></div>
+    <div class="chipc"><i style="background:var(--ok)"></i><div>Comprar, confere<code>--ok</code></div></div>
+    <div class="chipc"><i style="background:var(--warn)"></i><div>Aguardar, não verificado<code>--warn</code></div></div>
+    <div class="chipc"><i style="background:var(--bad)"></i><div>Evitar, objeção<code>--bad</code></div></div>
+    <div class="chipc"><i style="background:var(--info)"></i><div>Foco e links<code>--info</code></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Tipografia e forma</h2>
+  <div class="type">
+    <div><small>Display 34/38 · 700</small><span style="font-size:34px;font-weight:700;letter-spacing:-.03em">Onde discordamos</span></div>
+    <div><small>Título 24/30 · 700</small><span style="font-size:24px;font-weight:700;letter-spacing:-.025em">Carteira da semana</span></div>
+    <div><small>Corpo 15/22 · 400</small><span>O lucro de 12 meses cresce, mas a tese depende de margem que o ITR não confirma.</span></div>
+    <div><small>Números · SF Mono</small><span style="font:600 17px var(--mono)">ROE 21,4% · P/L 8,9</span></div>
+    <div><small>Fonte e data · SF Mono</small><span style="font:12px var(--mono);color:var(--muted)">CVM ITR · 14/08/2026</span></div>
+  </div>
+  <div class="radii" style="margin-top:24px">
+    <div style="border-radius:var(--r-sm)">8</div><div style="border-radius:var(--r-md)">12</div><div style="border-radius:var(--r-lg)">20</div><div style="border-radius:var(--r-xl)">28</div><div style="border-radius:var(--r-full)">full</div>
+  </div>
+</section>
+
+<section>
+  <h2>Componentes</h2>
+  <div class="grid comps">
+    <div class="box"><h3>Botão</h3><div class="row"><button class="btn p" type="button">Primário</button><button class="btn s" type="button">Secundário</button><button class="btn g" type="button">Contorno</button><button class="btn p sm" type="button">Pequeno</button></div></div>
+    <div class="box"><h3>Ação sugerida</h3><div class="row"><span class="pill ok">Comprar</span><span class="pill warn">Aguardar</span><span class="pill bad">Evitar</span><span class="pill idle">fila</span><span class="pill ok run">Rodando</span></div></div>
+    <div class="box"><h3>Nota e certeza</h3><div class="row"><span class="score hi">8,2</span><span class="score mid">5,9</span><span class="score lo">3,1</span><span class="score">n/d</span></div>
+      <div class="row" style="margin-top:12px"><span class="cert"><i class="on"></i><i class="on"></i><i class="on"></i>&nbsp;alta</span><span class="cert"><i class="on"></i><i class="on"></i><i></i>&nbsp;média</span><span class="cert"><i class="on"></i><i></i><i></i>&nbsp;baixa</span></div></div>
+    <div class="box"><h3>Fonte e dado ausente</h3><div class="row"><span class="tag">CVM ITR · 14/08</span><span class="tag">Yahoo · 20/10</span><span class="tag nv">não verificado</span><span class="tag nv">pendente</span></div></div>
+    <div class="box"><h3>Diferença contra a XP</h3><div class="row"><span class="delta d">DISCORDA</span><span class="delta c">CONCORDA</span><span class="delta c">XP: COMPRAR</span></div></div>
+    <div class="box"><h3>Valuation em cenários</h3>
+      <div class="scen"><div class="rail"></div><div class="rng" style="left:20%;width:67%"></div>
+        <div class="pt" style="left:20%"><b>R$ 28</b>bear</div><div class="pt" style="left:52%"><b>R$ 41</b>base</div><div class="pt" style="left:87%"><b>R$ 55</b>bull</div>
+        <div class="px" style="left:40%"></div><div class="pxl" style="left:40%">preço R$ 36</div></div></div>
+    <div class="box"><h3>Objeção e tese</h3>
+      <div class="thesis"><span class="k">Tese da XP</span><p>Rentabilidade alta e resiliente, com crescimento de crédito.</p></div>
+      <div class="obj" style="margin-top:12px"><span class="k">Objeção do advogado</span><p>A margem projetada só se sustenta com repasse de preço que o setor não mostrou nos últimos dois trimestres.</p></div>
+      <div class="obj" style="margin-top:12px;border-left-color:var(--warn)"><span class="k" style="color:var(--warn)">Aviso</span><p>Variante de aviso em âmbar.</p></div></div>
+    <div class="box"><h3>Conferência</h3>
+      <div class="chk"><span class="d y"><svg class="i"><use href="#check"/></svg></span><div>Lucro de 12 meses<span class="m">auditor confere · CVM ITR</span></div></div>
+      <div class="chk" style="margin-top:12px"><span class="d n"><svg class="i"><use href="#x"/></svg></span><div>Cotação difere em 0,8% da B3<span class="m">agregador, não a B3</span></div></div>
+      <div class="chk" style="margin-top:12px"><span class="d q">?</span><div>Custo do crédito projetado<span class="m">não verificado</span></div></div></div>
+    <div class="box"><h3>Passo da rotina</h3>
+      <div class="step"><span class="pill ok" style="padding:2px 8px">ok</span>Fundamentos CVM<span class="st tag">DFP ITR FCA</span></div>
+      <div class="step"><span class="pill ok run" style="padding:2px 8px">agora</span>Advogado do diabo<span class="st tag">contra.json</span></div>
+      <div class="step"><span class="pill idle" style="padding:2px 8px">fila</span>Auditor<span class="st tag">conferencia.json</span></div></div>
+    <div class="box"><h3>Item de lista</h3>
+      <div class="li"><span class="score mid">5,9</span><div class="tx"><b>ITUB4</b><span class="m">Banco · XP: comprar</span></div><div class="sp"><span class="pill warn">Aguardar</span><span class="delta d">DISCORDA</span></div></div>
+      <div class="li" style="margin-top:8px"><span class="score">n/d</span><div class="tx"><b>BDR X</b><span class="m">Sem demonstrações na CVM</span></div><div class="sp"><span class="tag nv">não verificado</span></div></div></div>
+    <div class="box"><h3>Métricas</h3><div class="metrics"><div><small>ROE</small><b>21,4%</b></div><div><small>P/L</small><b>8,9</b></div><div><small>P/VP</small><b>1,9</b></div></div></div>
+    <div class="box"><h3>Gráfico de desempenho</h3>
+      <svg class="chart" viewBox="0 0 300 150" role="img" aria-label="Retorno acumulado do bot, do Ibovespa e do CDI em 8 semanas">
+        <line class="gl" x1="28" y1="20" x2="296" y2="20"/><line class="gl" x1="28" y1="60" x2="296" y2="60"/><line class="gl" x1="28" y1="100" x2="296" y2="100"/><line class="gl" x1="28" y1="130" x2="296" y2="130"/>
+        <text x="0" y="23">+4%</text><text x="0" y="63">+2%</text><text x="0" y="103">0%</text><text x="0" y="133">-1%</text>
+        <polyline fill="none" stroke="var(--fg)" stroke-width="2.2" stroke-linejoin="round" points="28,100 62,92 96,86 130,70 164,74 198,52 232,44 266,36 296,30"/>
+        <polyline fill="none" stroke="var(--info)" stroke-width="2" stroke-linejoin="round" points="28,100 62,104 96,96 130,90 164,98 198,84 232,80 266,74 296,70"/>
+        <polyline fill="none" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="4 4" points="28,100 62,97 96,94 130,91 164,88 198,85 232,82 266,79 296,76"/>
+        <circle cx="296" cy="30" r="3.5" fill="var(--fg)"/>
+        <text x="28" y="146">sem 1</text><text x="130" y="146">sem 4</text><text x="262" y="146">sem 8</text>
+      </svg>
+      <div class="leg" style="flex-direction:row;gap:14px;flex-wrap:wrap;margin-top:8px"><div><i style="background:var(--fg)"></i>Bot</div><div><i style="background:var(--info)"></i>Ibovespa</div><div><i style="background:var(--muted)"></i>CDI</div></div>
+      <div class="obj" style="border-left-color:var(--warn);margin-top:12px"><span class="k" style="color:var(--warn)">Amostra pequena</span><p>18 de 30 observações em 8 semanas. Não conclua nada ainda.</p></div></div>
+    <div class="box"><h3>Cartão de bot</h3>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card"><div class="bh"><span class="av inv">CA</span><div><b>Casas</b><span class="m">Recomendações e preços alvo das casas de análise.</span></div><span class="sp pill ok">Pronto</span></div>
+          <div class="task" style="color:var(--muted)">Última pergunta: O que as casas dizem de PRIO3?</div>
+          <div class="apps"><span class="tag">casas.json</span></div><div class="dados-bot">Dados de 05/10/2026</div></div>
+        <div class="card"><div class="bh"><span class="av">MA</span><div><b>Macro</b><span class="m">Cenário macroeconômico, político e externo.</span></div><span class="sp pill warn">Sem arquivo</span></div>
+          <div class="task" style="color:var(--muted)">Sem perguntas ainda. Experimente: Qual o risco central da semana?</div>
+          <div class="apps"><span class="tag nv">macro.json: ausente</span></div><div class="dados-bot">Sem data nos dados</div></div>
+      </div></div>
+    <div class="box"><h3>Barra de bots</h3>
+      <div class="bots" style="padding:0">
+        <button type="button" class="bot" aria-pressed="true"><span class="m" aria-hidden="true">AN</span>Analista</button>
+        <button type="button" class="bot" aria-pressed="false"><span class="m" aria-hidden="true">AD</span>Advogado</button>
+        <button type="button" class="bot" aria-pressed="false"><span class="m" aria-hidden="true">CA</span>Casas</button>
+      </div></div>
+    <div class="box"><h3>Mensagens e fontes</h3>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="msg u"><div class="bub">Qual a objeção mais forte em ITUB4?</div></div>
+        <div class="msg a"><span class="av t">AD</span><div class="bub"><p>O ROE de 21,4% já está no preço. Sem folga para erro.</p><p>O custo do crédito ainda não tem fonte.</p></div></div>
+        <div class="fontes"><span class="tag">CVM ITR · 14/08/2026</span><span class="tag nv">custo do crédito: não verificado</span></div>
+        <div class="msg a"><span class="av t">AD</span><div class="bub digitando"><i></i><i></i><i></i></div></div>
+      </div></div>
+    <div class="box"><h3>Agendamento</h3>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card cartao-agenda" style="margin-left:0"><div class="lab">Agendar mensagem</div>
+          <div class="kv"><span>Quando</span><span>segunda, 26/10 às 16:00</span></div><div class="kv"><span>Bot</span><span>Risco</span></div><div class="kv"><span>Pergunta</span><span>Resumo da semana</span></div>
+          <div class="acoes"><button type="button" class="btn g sm">Cancelar</button><button type="button" class="btn p sm">Confirmar</button></div></div>
+        <p class="agendada" style="margin:0">Agendada · segunda, 26/10 às 16:00</p>
+        <div class="step" style="align-items:flex-start;padding:0"><span class="pill idle" style="padding:2px 8px">agendada</span><div><b style="font-weight:600">segunda, 26/10 às 16:00</b> · Risco<span class="m" style="display:block;font-size:12.5px;color:var(--muted)">Resumo da semana</span></div><span class="st"><button type="button" class="btn g sm">Cancelar</button></span></div>
+      </div></div>
+    <div class="box"><h3>Campo de mensagem</h3>
+      <div class="sugestoes" style="padding:0 0 8px"><button type="button" class="chip">Compare PRIO3 e ITUB4</button><button type="button" class="chip on">Usar minha carteira</button></div>
+      <form class="compor" style="padding:0" onsubmit="return false"><textarea rows="1" placeholder="Pergunte ao bot Analista" aria-label="Pergunta"></textarea><button type="submit" class="enviar" aria-label="Enviar" disabled><svg class="i" aria-hidden="true"><use href="#send"/></svg></button></form>
+      <p class="rodape-chat" style="padding:8px 0 0">Respostas de IA sobre os dados da semana. Não é recomendação.</p></div>
+    <div class="box"><h3>Navegação por abas</h3>
+      <nav class="tabs"><a class="on" href="#"><svg class="i"><use href="#list"/></svg>Semana</a><a href="#"><svg class="i"><use href="#chat"/></svg>Chat</a><a href="#"><svg class="i"><use href="#wallet"/></svg>Carteira</a><a href="#"><svg class="i"><use href="#chart"/></svg>Desempenho</a><a href="#"><svg class="i"><use href="#cog"/></svg>Rotina</a></nav></div>
+  </div>
+</section>
+</div>
+</body>
+</html>

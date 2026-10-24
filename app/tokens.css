@@ -1,0 +1,30 @@
+/* Tokens do Advogado do Diabo. Fonte da verdade: referencia.html.
+   Escuro é o padrão. O claro entra pelo sistema (prefers-color-scheme) ou por data-theme="light" na raiz. */
+:root{
+  /* superfícies */
+  --bg:#000; --surface:#0E0F11; --elevated:#1A1C1F; --line:#2A2D31;
+  /* texto e ação principal */
+  --fg:#ECEDEE; --muted:#868B92; --inv:#fff; --on-inv:#000;
+  /* semânticas: Comprar/confere, Aguardar/não verificado, Evitar/objeção, foco */
+  --ok:#19C37D; --warn:#F2A93B; --bad:#F4505C; --info:#4DA8F0;
+  /* tipografia: SF Pro pelo sistema (Apple). Não hospedar a fonte, a licença proíbe. */
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',system-ui,'Segoe UI',sans-serif;
+  --mono:'SF Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  /* raios */
+  --r-sm:8px; --r-md:12px; --r-lg:20px; --r-xl:28px; --r-full:999px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --bg:#fff; --surface:#F5F6F7; --elevated:#E8EAEC; --line:#D9DCE0;
+    --fg:#0E1013; --muted:#5F656C; --inv:#0E1013; --on-inv:#fff;
+    --ok:#0B8A5A; --warn:#9A5B00; --bad:#C8182B; --info:#0A66B8;
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#fff; --surface:#F5F6F7; --elevated:#E8EAEC; --line:#D9DCE0;
+  --fg:#0E1013; --muted:#5F656C; --inv:#0E1013; --on-inv:#fff;
+  --ok:#0B8A5A; --warn:#9A5B00; --bad:#C8182B; --info:#0A66B8;
+  color-scheme:light;
+}

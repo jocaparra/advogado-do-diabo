@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Advogado do Diabo</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="chat.css">
+<script src="tema.js"></script>
+</head>
+<body>
+<script src="icones.js"></script>
+<div class="app">
+  <header class="topo">
+    <div class="brand"><span class="mark"><svg class="i" aria-hidden="true"><use href="#scale"/></svg></span>Advogado do Diabo</div>
+    <div class="seg" role="group" aria-label="Tema">
+      <button type="button" id="t-dark" aria-pressed="false">Escuro</button>
+      <button type="button" id="t-light" aria-pressed="true">Claro</button>
+    </div>
+  </header>
+  <p class="aviso" id="aviso-legal">Projeto independente, sem vínculo com a XP. Não é recomendação de investimento.</p>
+  <main id="view" tabindex="-1" aria-live="polite"></main>
+  <nav class="tabs" aria-label="Telas">
+    <a data-aba="semana" href="#/semana"><svg class="i" aria-hidden="true"><use href="#list"/></svg>Semana</a>
+    <a data-aba="chat" href="#/chat"><svg class="i" aria-hidden="true"><use href="#chat"/></svg>Chat</a>
+    <a data-aba="carteira" href="#/carteira"><svg class="i" aria-hidden="true"><use href="#wallet"/></svg>Carteira</a>
+    <a data-aba="desempenho" href="#/desempenho"><svg class="i" aria-hidden="true"><use href="#chart"/></svg>Desempenho</a>
+    <a data-aba="rotina" href="#/rotina"><svg class="i" aria-hidden="true"><use href="#cog"/></svg>Rotina</a>
+  </nav>
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

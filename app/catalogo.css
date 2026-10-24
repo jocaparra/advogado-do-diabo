@@ -1,0 +1,29 @@
+/* Layout só da página de catálogo. */
+.wrap{max-width:1240px;margin-inline:auto}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:-16px;padding:14px 16px}
+.top .wrap{display:flex;align-items:center;gap:16px;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px;font-weight:600;letter-spacing:-.01em}
+.mark{width:32px;height:32px;border-radius:50%;background:var(--inv);color:var(--on-inv);display:grid;place-items:center}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r-full);padding:3px;gap:2px;background:var(--surface)}
+.seg button{border:0;background:none;padding:6px 14px;border-radius:var(--r-full);color:var(--muted);font-size:13px;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--inv);color:var(--on-inv)}
+
+.intro{padding-block:56px 24px;max-width:760px}
+.intro h1{font-size:clamp(34px,6vw,56px);line-height:1.04;letter-spacing:-.035em;margin:0 0 16px;text-wrap:balance;font-weight:700}
+.intro p{color:var(--muted);font-size:17px;margin:0 0 20px;max-width:62ch}
+.legal{display:flex;gap:12px;align-items:flex-start;border:1px solid color-mix(in srgb,var(--warn) 50%,var(--line));background:color-mix(in srgb,var(--warn) 8%,transparent);border-radius:var(--r-md);padding:12px 14px;font-size:13.5px;max-width:760px}
+.legal svg{color:var(--warn);margin-top:1px}
+h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:0 0 20px;font-family:var(--mono)}
+section{padding-block:40px;border-top:1px solid var(--line);margin-top:24px}
+.grid{display:grid;gap:16px}
+.sw{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.chipc{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
+.chipc i{display:block;height:64px;border-bottom:1px solid var(--line)}
+.chipc div{padding:10px 12px;font-size:13px}
+.chipc code{display:block;font:12px var(--mono);color:var(--muted)}
+.type{display:grid;gap:14px}
+.type div{display:flex;gap:20px;align-items:baseline;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:14px}
+.type small{font:12px var(--mono);color:var(--muted);width:170px}
+.radii{display:flex;gap:16px;flex-wrap:wrap}
+.radii div{width:84px;height:84px;background:var(--elevated);border:1px solid var(--line);display:grid;place-items:center;font:12px var(--mono);color:var(--muted)}
+
