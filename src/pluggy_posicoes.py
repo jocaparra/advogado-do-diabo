@@ -83,13 +83,47 @@ def _numero(x):
     return v if math.isfinite(v) else None
 
 
-def extrair_acoes(invs):
+def preco_medio_transacoes(trans, quantidade_atual):
+    """Preço médio móvel a partir das compras e vendas (`/investments/{id}/transactions`), ou None.
+
+    Compra soma quantidade e custo (valor unitário x quantidade + despesas); venda tira custo na proporção
+    do preço médio. Só devolve número se o histórico fecha com a posição atual: venda maior que o saldo,
+    tipo desconhecido, valor inválido ou quantidade final diferente da posição deixam o preço médio vazio.
+    """
+    qtd, custo = 0.0, 0.0
+    for t in sorted((x for x in trans if isinstance(x, dict)), key=lambda x: str(x.get('tradeDate') or x.get('date') or '')):
+        q, v = _numero(t.get('quantity')), _numero(t.get('value'))
+        if q is None or q <= 0:
+            return None
+        if t.get('type') == 'BUY':
+            if v is None or v <= 0:
+                return None
+            qtd += q
+            custo += q * v + (_numero(t.get('expenses')) or 0)
+        elif t.get('type') == 'SELL':
+            if q > qtd + 1e-9:
+                return None
+            custo -= custo * q / qtd
+            qtd -= q
+        else:
+            return None
+    if qtd <= 0 or abs(qtd - quantidade_atual) > 1e-6:
+        return None
+    return round(custo / qtd, 4)
+
+
+def extrair_acoes(invs, transacoes=None):
     """Filtra ações/ETFs com código de ticker e soma por ticker. Devolve (posicoes, ignorados).
 
     O campo `code` da Pluggy traz o ticker nas posições de bolsa; o que não parecer ticker
     (renda fixa, fundos, COE) vai para `ignorados` com o motivo, para você ver o que ficou de fora.
+
+    `transacoes` (opcional) mapeia o `id` de cada investimento para a lista das suas transações; quando
+    cobrem todos os lotes do ticker e fecham com a quantidade, o preço médio sai delas (tem prioridade
+    sobre `amountOriginal`).
     """
-    por_tk, valor_tk, custo_tk, ignorados = {}, {}, {}, []
+    transacoes = transacoes or {}
+    por_tk, valor_tk, custo_tk, trans_tk, ignorados = {}, {}, {}, {}, []
     for i in invs:
         if not isinstance(i, dict):
             continue
@@ -111,11 +145,17 @@ def extrair_acoes(invs):
             c = c if c is not None and c > 0 else None
             antes = custo_tk.get(tk, 0.0)
             custo_tk[tk] = None if (antes is None or c is None) else antes + c
+            lista = transacoes.get(i.get('id'))
+            antes_t = trans_tk.get(tk, [])
+            trans_tk[tk] = None if (antes_t is None or lista is None) else antes_t + lista
     saida = []
     for t, q in sorted(por_tk.items()):
         item = {'ticker': t, 'quantidade': q, 'preco_atual': round(valor_tk[t] / q, 4) if valor_tk[t] else None}
-        if custo_tk.get(t):                 # a chave só existe quando há custo (contrato anterior preservado)
-            item['preco_medio'] = round(custo_tk[t] / q, 4)
+        pm = preco_medio_transacoes(trans_tk[t], q) if trans_tk.get(t) else None
+        if pm is None and custo_tk.get(t):
+            pm = round(custo_tk[t] / q, 4)
+        if pm:                              # a chave só existe quando há custo (contrato anterior preservado)
+            item['preco_medio'] = pm
         saida.append(item)
     return saida, ignorados
 
@@ -158,13 +198,39 @@ def ler_json(texto):
     return extrair_acoes(invs)
 
 
+def transacoes_investimento(chave, inv_id):
+    """Todas as páginas de /investments/{id}/transactions."""
+    pagina, saida = 1, []
+    while True:
+        r = _chamar('GET', f'/investments/{urllib.parse.quote(str(inv_id), safe="")}/transactions', chave,
+                    consulta={'page': pagina, 'pageSize': 500})
+        if not isinstance(r, dict):
+            raise PluggyErro('resposta inesperada da Pluggy em /investments/{id}/transactions')
+        saida += [t for t in (r.get('results') or []) if isinstance(t, dict)]
+        total = r.get('totalPages')
+        if pagina >= (total if isinstance(total, int) else 1):
+            return saida
+        pagina += 1
+
+
 def baixar(client_id, client_secret, item_ids):
-    """Autentica, lê todos os itens e devolve (posicoes, ignorados). Levanta PluggyErro."""
+    """Autentica, lê todos os itens e devolve (posicoes, ignorados). Levanta PluggyErro.
+
+    As transações servem só para o preço médio: se a Pluggy falhar nelas, a posição vem sem preço médio
+    (ou com o `amountOriginal`, se houver) em vez de derrubar a leitura."""
     chave = autenticar(client_id, client_secret)
     todos = []
     for it in item_ids:
         todos += investimentos(chave, it)
-    return extrair_acoes(todos)
+    transacoes = {}
+    for i in todos:
+        q = _numero(i.get('quantity'))
+        if i.get('type') in TIPOS_ACAO and i.get('id') and q is not None and q > 0:
+            try:
+                transacoes[i['id']] = transacoes_investimento(chave, i['id'])
+            except PluggyErro:
+                pass
+    return extrair_acoes(todos, transacoes)
 
 
 def main():
