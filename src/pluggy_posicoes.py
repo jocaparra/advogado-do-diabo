@@ -1,6 +1,7 @@
 """Baixa suas posições de renda variável pela API da Pluggy (conector MeuPluggy) e grava um CSV.
 
 uso: python src/pluggy_posicoes.py [saida.csv]        (padrão: entrada/posicoes_pluggy.csv)
+     python src/minha_carteira.py --pluggy-json resposta.json   (usa um JSON já salvo, sem credenciais)
 
 Variáveis de ambiente (nunca coloque no código nem no git):
     PLUGGY_CLIENT_ID       credencial da sua aplicação em dashboard.pluggy.ai
@@ -88,7 +89,7 @@ def extrair_acoes(invs):
     O campo `code` da Pluggy traz o ticker nas posições de bolsa; o que não parecer ticker
     (renda fixa, fundos, COE) vai para `ignorados` com o motivo, para você ver o que ficou de fora.
     """
-    por_tk, valor_tk, ignorados = {}, {}, []
+    por_tk, valor_tk, custo_tk, ignorados = {}, {}, {}, []
     for i in invs:
         if not isinstance(i, dict):
             continue
@@ -104,9 +105,19 @@ def extrair_acoes(invs):
             tk = codigo[:-1] if codigo.endswith('F') else codigo
             por_tk[tk] = por_tk.get(tk, 0) + q
             valor_tk[tk] = valor_tk.get(tk, 0) + q * (_numero(i.get('value')) or 0)
-    return [{'ticker': t, 'quantidade': q,
-             'preco_atual': round(valor_tk[t] / q, 4) if valor_tk[t] else None}
-            for t, q in sorted(por_tk.items())], ignorados
+            # `amountOriginal` = valor aplicado (custo). Sem ele (ou zerado) o preço médio fica vazio:
+            # não se deduz custo de outro campo. Se um dos lotes não tiver custo, o ticker inteiro fica sem.
+            c = _numero(i.get('amountOriginal'))
+            c = c if c is not None and c > 0 else None
+            antes = custo_tk.get(tk, 0.0)
+            custo_tk[tk] = None if (antes is None or c is None) else antes + c
+    saida = []
+    for t, q in sorted(por_tk.items()):
+        item = {'ticker': t, 'quantidade': q, 'preco_atual': round(valor_tk[t] / q, 4) if valor_tk[t] else None}
+        if custo_tk.get(t):                 # a chave só existe quando há custo (contrato anterior preservado)
+            item['preco_medio'] = round(custo_tk[t] / q, 4)
+        saida.append(item)
+    return saida, ignorados
 
 
 def csv_texto(posicoes):
@@ -114,8 +125,37 @@ def csv_texto(posicoes):
     for p in posicoes:
         q = f"{p['quantidade']:.6f}".rstrip('0').rstrip('.')
         pa = f"{p['preco_atual']:.4f}".replace('.', ',') if p.get('preco_atual') else ''
-        linhas.append(f"{p['ticker']};{q.replace('.', ',')};;{pa}")
+        pm = f"{p['preco_medio']:.4f}".replace('.', ',') if p.get('preco_medio') else ''
+        linhas.append(f"{p['ticker']};{q.replace('.', ',')};{pm};{pa}")
     return '\n'.join(linhas) + '\n'
+
+
+def ler_json(texto):
+    """Posições a partir de um JSON de /investments já salvo (sem rede e sem credenciais).
+
+    Aceita a resposta paginada da Pluggy (`{"results": [...]}`), uma lista de investimentos ou o JSON de
+    vários itens (lista de respostas). Devolve (posicoes, ignorados) como `extrair_acoes`."""
+    try:
+        dado = json.loads(texto.lstrip('\ufeff'))
+    except ValueError as e:
+        raise PluggyErro(f'o arquivo não é um JSON válido: {e}')
+    invs = []
+
+    def coletar(x):
+        if isinstance(x, list):
+            for y in x:
+                coletar(y)
+        elif isinstance(x, dict):
+            if isinstance(x.get('results'), list):
+                coletar(x['results'])
+            elif isinstance(x.get('investments'), list):
+                coletar(x['investments'])
+            elif 'type' in x or 'code' in x:
+                invs.append(x)
+    coletar(dado)
+    if not invs:
+        raise PluggyErro('não encontrei investimentos no JSON (esperado "results" ou uma lista com "type" e "code")')
+    return extrair_acoes(invs)
 
 
 def baixar(client_id, client_secret, item_ids):

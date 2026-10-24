@@ -1,6 +1,6 @@
 """Cruza as posições de uma carteira pessoal com o ranking da semana. Um comando só.
 
-uso: python src/minha_carteira.py [--semana PASTA | --ranking ARQUIVO_OU_URL] [--csv ARQUIVO | --pluggy] [--salvar ARQUIVO]
+uso: python src/minha_carteira.py [--semana PASTA | --ranking ARQUIVO_OU_URL] [--csv ARQUIVO | --pluggy | --pluggy-json ARQUIVO] [--salvar ARQUIVO]
        python src/minha_carteira.py --configurar | --plano | --esquecer
 
 Fonte das posições (nesta ordem, se nada for indicado):
@@ -567,6 +567,23 @@ def _posicoes_pluggy():
     return M_ler(P.csv_texto(pos))
 
 
+def _posicoes_json(caminho):
+    import pluggy_posicoes as P
+    caminho = os.path.abspath(caminho)
+    if not os.path.isfile(caminho):
+        sys.exit(f'arquivo JSON não encontrado: {caminho}')
+    try:
+        with open(caminho, encoding='utf-8') as f:
+            pos, ignorados = P.ler_json(f.read())
+    except (P.PluggyErro, OSError) as e:
+        sys.exit(str(e))
+    sem_custo = [p['ticker'] for p in pos if not p.get('preco_medio')]
+    print(f'JSON da Pluggy: {len(pos)} ações/ETFs.' + (f' Sem preço médio: {", ".join(sem_custo)}.' if sem_custo else ''))
+    for g in ignorados:
+        print('  não incluído:', g)
+    return M_ler(P.csv_texto(pos))
+
+
 def M_ler(texto):
     try:
         return ler_posicoes(texto)
@@ -586,6 +603,7 @@ def main():
     fonte = ap.add_mutually_exclusive_group()
     fonte.add_argument('--csv', help='CSV de posições')
     fonte.add_argument('--pluggy', action='store_true', help='ler posições do MeuPluggy (variáveis PLUGGY_*)')
+    fonte.add_argument('--pluggy-json', help='JSON de /investments da Pluggy já salvo (sem credenciais nem rede)')
     a = ap.parse_args()
     if a.configurar:
         return configurar()
@@ -598,7 +616,9 @@ def main():
         sys.exit('use --semana ou --ranking, não os dois')
     pasta = C.pasta_semana(['x', a.semana]) if a.semana else (None if a.ranking else _semana_recente())
     tem_pluggy = _credenciais()[3] is not None
-    if a.csv or (not a.pluggy and not tem_pluggy):
+    if a.pluggy_json:
+        posicoes = _posicoes_json(a.pluggy_json)
+    elif a.csv or (not a.pluggy and not tem_pluggy):
         caminho = os.path.abspath(a.csv or 'entrada/posicoes.csv')
         if os.path.isdir(caminho):
             sys.exit(f'{caminho} é uma pasta; informe o arquivo CSV com --csv.')

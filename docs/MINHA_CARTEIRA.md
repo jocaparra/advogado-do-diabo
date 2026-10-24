@@ -29,6 +29,7 @@ estiverem definidas) ou de `entrada/posicoes.csv`. Opções:
 ```bash
 python src/minha_carteira.py --csv minhas_posicoes.csv
 python src/minha_carteira.py --pluggy
+python src/minha_carteira.py --pluggy-json resposta.json   # JSON de /investments já salvo, sem credenciais nem rede
 python src/minha_carteira.py --semana semana_20261005
 python src/minha_carteira.py --ranking https://.../ranking.json --salvar relatorio.md
 ```
