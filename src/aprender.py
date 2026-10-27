@@ -7,6 +7,7 @@ uso:
   python src/aprender.py aplicar <pasta_da_semana> --proposta ID --aprovado-por usuario
   python src/aprender.py verificar <pasta_da_semana>     # compara a versão atual com a anterior; sugere rollback
   python src/aprender.py reverter --para VERSAO          # nova versão que copia uma anterior
+  python src/aprender.py integridade                     # acusa versões de parâmetros alteradas à mão
   python src/aprender.py versoes
   python src/aprender.py fase <pasta_da_semana>          # em que fase de aprendizado os dados permitem estar
 
@@ -254,12 +255,61 @@ def _salvar(dados, arquivo=None):
     os.replace(tmp, arquivo)
 
 
+def _canonico(v):
+    """Conteúdo de uma versão sem o campo `hash`, em JSON estável."""
+    return json.dumps({k: x for k, x in v.items() if k != 'hash'}, sort_keys=True, ensure_ascii=False)
+
+
+def hash_versao(v, anterior=None):
+    """SHA-256 do conteúdo da versão encadeado ao CONTEÚDO da anterior (não ao hash gravado dela): editar uma versão
+    antiga, mesmo uma sem hash (baseline ou arquivo legado), quebra o hash de todas as seguintes."""
+    ant = hashlib.sha256(_canonico(anterior).encode()).hexdigest() if anterior else ''
+    return hashlib.sha256((_canonico(v) + '|' + ant).encode()).hexdigest()
+
+
+def verificar_integridade(dados):
+    """Acusa versões alteradas à mão depois de gravadas. Versões sem `hash` (arquivos legados e a baseline) não são
+    verificáveis por si, mas são cobertas pelo hash da versão seguinte.
+
+    Devolve {'ok', 'verificadas', 'sem_hash', 'alteradas', 'versao_atual_existe'}."""
+    vs = dados.get('versoes') or []
+    alteradas, sem_hash, verificadas = [], [], 0
+    for i, v in enumerate(vs):
+        if 'hash' not in v:
+            sem_hash.append(v.get('versao'))
+            continue
+        verificadas += 1
+        if v['hash'] != hash_versao(v, vs[i - 1] if i else None):
+            alteradas.append(v.get('versao'))
+    existe = any(v.get('versao') == dados.get('versao_atual') for v in vs)
+    return {'ok': not alteradas and existe, 'verificadas': verificadas, 'sem_hash': sem_hash, 'alteradas': alteradas,
+            'versao_atual_existe': existe}
+
+
+def _anexar(dados, nova, arquivo):
+    """Grava `nova` como versão atual, com hash encadeado, de forma atômica."""
+    nova['hash'] = hash_versao(nova, dados['versoes'][-1] if dados['versoes'] else None)
+    dados['versoes'].append(nova)
+    dados['versao_atual'] = nova['versao']
+    _salvar(dados, arquivo)
+
+
 def versao(dados, n=None):
     n = n or dados['versao_atual']
     for v in dados['versoes']:
         if v['versao'] == n:
             return v
     raise ValueError(f'versão inexistente: {n}')
+
+
+def _independencia(obs, validacao):
+    """Quão independente é a evidência: os papéis de uma semana compartilham fatores, então o que conta de verdade é o
+    número de semanas, não o de observações. Gravado junto da versão para a memória não superestimar a prova."""
+    usadas = set(validacao.get('semanas_treino', [])) | set(validacao.get('semanas_teste', []))
+    n = sum(1 for o in obs if o.get('semana') in usadas)
+    return {'semanas': len(usadas), 'observacoes': n,
+            'observacoes_por_semana': round(n / len(usadas), 1) if usadas else None,
+            'aviso': 'observações da mesma semana são correlacionadas; a prova vale pelo número de semanas'}
 
 
 def validar_proposta(proposta):
@@ -298,17 +348,19 @@ def aplicar(proposta, obs, aprovado_por, hoje=None, arquivo=None):
     if not portao(obs)['aberto']:
         raise ValueError('portão de amostra fechado nesta data; a evidência da proposta não se sustenta')
     dados = carregar_versoes(arquivo)
+    integ = verificar_integridade(dados)
+    if not integ['ok']:
+        raise ValueError(f'arquivo de versões inconsistente (versões alteradas: {integ["alteradas"]}); nada foi aplicado')
     atual = versao(dados)
     if atual['parametros']['pesos'] != proposta['pesos_atuais']:
         raise ValueError('a proposta foi feita sobre outra versão; gere uma nova')
     nova = {'versao': max(v['versao'] for v in dados['versoes']) + 1,
             'criado_em': dt.datetime.now().replace(microsecond=0).isoformat(), 'parametros': {'pesos': proposta['pesos_propostos']},
             'motivo': f'proposta {proposta["id"]}: ganho de {proposta["validacao"]["ganho"]} em Spearman fora da amostra',
-            'aprovado_por': aprovado_por, 'evidencia': {'portao': proposta['portao'], 'validacao': proposta['validacao']},
+            'aprovado_por': aprovado_por, 'evidencia': {'portao': proposta['portao'], 'validacao': proposta['validacao'],
+                                                        'independencia': _independencia(obs, proposta['validacao'])},
             'aplicada_a_partir_de': hoje.isoformat(), 'base': atual['versao']}
-    dados['versoes'].append(nova)
-    dados['versao_atual'] = nova['versao']
-    _salvar(dados, arquivo)
+    _anexar(dados, nova, arquivo)
     return nova
 
 
@@ -316,6 +368,9 @@ def reverter(para, motivo='rollback manual', hoje=None, arquivo=None):
     """Cria nova versão copiando os parâmetros de uma anterior (o histórico fica intacto)."""
     hoje = hoje or dt.date.today()
     dados = carregar_versoes(arquivo)
+    integ = verificar_integridade(dados)
+    if not integ['ok']:
+        raise ValueError(f'arquivo de versões inconsistente (versões alteradas: {integ["alteradas"]}); nada foi revertido')
     alvo = versao(dados, para)
     atual = versao(dados)
     if alvo['versao'] == atual['versao']:
@@ -324,9 +379,7 @@ def reverter(para, motivo='rollback manual', hoje=None, arquivo=None):
             'criado_em': dt.datetime.now().replace(microsecond=0).isoformat(), 'parametros': json.loads(json.dumps(alvo['parametros'])),
             'motivo': f'{motivo}: volta aos parâmetros da versão {para}', 'aprovado_por': 'usuario', 'evidencia': None,
             'aplicada_a_partir_de': hoje.isoformat(), 'base': atual['versao']}
-    dados['versoes'].append(nova)
-    dados['versao_atual'] = nova['versao']
-    _salvar(dados, arquivo)
+    _anexar(dados, nova, arquivo)
     return nova
 
 
@@ -394,6 +447,7 @@ def main(argv=None):
     rv = sub.add_parser('reverter')
     rv.add_argument('--para', type=int, required=True)
     sub.add_parser('versoes')
+    sub.add_parser('integridade')
     argv = sys.argv[1:] if argv is None else list(argv)
     if len(argv) == 1 and argv[0] not in sub.choices and not argv[0].startswith('-'):
         argv = ['relatorio', argv[0]]          # forma curta usada por executar.py
@@ -405,6 +459,12 @@ def main(argv=None):
             d = carregar_versoes()
             for v in d['versoes']:
                 print(f'{"*" if v["versao"] == d["versao_atual"] else " "} v{v["versao"]}  {v["criado_em"]}  {v["aprovado_por"]:9} {v["motivo"]}')
+            return
+        if args.cmd == 'integridade':
+            r = verificar_integridade(carregar_versoes())
+            print(json.dumps(r, ensure_ascii=False, indent=1))
+            if not r['ok']:
+                sys.exit('INTEGRIDADE QUEBRADA: há versões alteradas à mão; não aplique nem reverta antes de investigar')
             return
         if args.cmd == 'reverter':
             n = reverter(args.para)

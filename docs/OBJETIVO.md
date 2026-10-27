@@ -53,6 +53,9 @@ Isso se desdobra em três frentes:
 ## Estado e próximos passos
 
 - Ranking semanal e cruzamento com a minha carteira: funcionando.
+- Avaliação e aprendizado: retorno total contra o Ibovespa, exclusões e versão do código registradas, propostas
+  revalidadas, versões com hash e frequência observada por nível de certeza. Calibrar a certeza como probabilidade
+  e testar pesos continuam dependendo de amostra.
 - Trilha quantitativa: em validação. Próximo: três testes pré-registrados (teto de 25% por setor,
   peso por capitalização, bandas de rebalanceamento) e **não mexer antes de 6 retratos mensais
   reais** (rodar `carteira_quant.py` todo mês e medir com `medir_quant.py`).

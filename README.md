@@ -190,7 +190,7 @@ Número que pode ser calculado de fonte estruturada é calculado em código, nã
 | `src/coletar_cvm.py` | Baixa DFP, ITR e FCA dos dados abertos da CVM e calcula receita, lucro e EBITDA de 12 meses, dívida líquida, P/L, P/VP, EV/EBITDA, ROE, payout e histórico anual de cada ticker (`fundamentos_cvm.json`). |
 | `src/gerar_dossie.py` e `src/valuation.py` | Dossiê por ação: valuation de lucros descontados em cenários (premissas em `dados/premissas_valuation.json`, perfis em `dados/perfis_setoriais.json`), retorno esperado e crescimento implícitos no preço, checklist setorial preenchido pelos agentes com fonte e data. É modelo de referência, não previsão. |
 | `src/regras.py` e `src/calcular_derivados.py` | Regra única de contagem de casas, mediana de preço alvo, upsides, upside ajustado e nota. O script grava os campos derivados em `casas.json` e `sintese.json` e lista o que mudou. |
-| `src/atualizar_historico.py` e `src/avaliar.py` | Registram cada recomendação (nota, ação, certeza, preço, Ibovespa, versão das regras e pesos) e, quando o horizonte vence, medem o retorno contra o Ibovespa em 4 e 12 semanas por ação sugerida, certeza e posição, com correlação de postos entre nota e resultado. Sem amostra mínima (30 observações em 8 semanas) o resultado é marcado como insuficiente. |
+| `src/atualizar_historico.py` e `src/avaliar.py` | Registram cada recomendação (nota, ação, certeza, preço, Ibovespa, versão das regras e pesos) e, quando o horizonte vence, medem o retorno contra o Ibovespa em 4 e 12 semanas por ação sugerida, certeza e posição, com correlação de postos entre nota e resultado, mais a frequência observada de superar o Ibovespa e de acerto por nível de certeza (com intervalo de confiança; a certeza é qualitativa, não é uma probabilidade). O `avaliacao.json` registra as observações excluídas por motivo e a versão do código usada. Sem amostra mínima (30 observações em 8 semanas) o resultado é marcado como insuficiente. |
 | `src/conferir.py` | Valida cada JSON contra [schemas/](schemas/) e recalcula nota, upsides, medianas, retorno de 5 dias, beta e volatilidade de 90 pregões. Erros bloqueiam a geração do PDF. |
 
 Limites conhecidos do cálculo da CVM (sempre sinalizados em `avisos`): EBITDA aproximado por
@@ -242,6 +242,7 @@ python src/gerar_graficos.py semana_AAAAMMDD      # figuras
 python src/montar_relatorio.py semana_AAAAMMDD    # PDF
 python src/atualizar_historico.py semana_AAAAMMDD # registra o ranking da semana
 python src/aprender.py fase semana_AAAAMMDD       # fase de aprendizado permitida pelos dados
+python src/aprender.py integridade                # acusa versões de parâmetros alteradas à mão
 python -m unittest discover tests                 # testes offline
 ```
 

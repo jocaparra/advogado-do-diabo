@@ -284,3 +284,16 @@ class TesteIntegridadeDaAvaliacao(unittest.TestCase):
             self.assertEqual(rep['banda_neutra_pp'], A.BANDA_NEUTRA_PP)
             self.assertEqual(rep['corte'], '2026-07-01')
             self.assertIn('excluidas', a)
+
+
+class TesteCalibracaoNaAvaliacao(unittest.TestCase):
+    def test_avaliacao_traz_frequencia_por_certeza_sem_inventar_probabilidade(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            TesteAvaliacao().monta(tmp)
+            r = A.avaliar(tmp, hoje=dt.date(2026, 7, 1))
+            cal = r['horizontes']['4_semanas']['calibracao_certeza']
+            self.assertEqual(set(cal), {'alta', 'média'})
+            self.assertEqual(cal['alta']['amostra'], 'insuficiente')    # 1 observação por nível
+            self.assertEqual(cal['alta']['acima_ibov_pct'], 100.0)      # AAA3 comprar, superou
+            self.assertEqual(cal['média']['acerto_direcional_pct'], 100.0)   # BBB3 evitar, caiu
+            self.assertNotIn('probabilidade', ' '.join(cal['alta']))

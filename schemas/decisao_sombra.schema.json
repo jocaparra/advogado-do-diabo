@@ -25,7 +25,16 @@
      "invalidadores": {"type": "array", "minItems": 1, "items": {"type": "string"}},
      "confianca": {"type": "string", "enum": ["alta", "média", "baixa"]},
      "dados_ausentes": {"type": "array", "items": {"type": "string"}},
-     "revisar_quando": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+     "revisar_quando": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+     "independencia_evidencias": {
+      "type": "object",
+      "required": ["fontes_independentes"],
+      "properties": {
+       "fontes_independentes": {"type": "integer", "minimum": 0},
+       "grupos_mesma_origem": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}},
+       "observacao": {"type": "string"}
+      }
+     }
     }
    }
   }

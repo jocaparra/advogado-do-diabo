@@ -86,6 +86,46 @@ class TesteConferirDecisao(unittest.TestCase):
         e, _ = CD.conferir(d, self.EV)
         self.assertTrue(any(x.startswith('schema') for x in e))
 
+    def so_aaa(self, **kw):
+        """Decisão com os campos aplicados apenas ao primeiro papel (AAA3); BBB3 fica como está."""
+        d = self.dec()
+        d['decisoes'][0].update(kw)
+        return d
+
+    def test_decisao_antiga_sem_independencia_continua_valida(self):
+        e, a = CD.conferir(self.dec(), self.EV)            # campo opcional: arquivos antigos seguem válidos
+        self.assertEqual((e, a), ([], []))
+
+    def test_comprar_sem_independencia_vira_aviso_e_nao_erro(self):
+        e, a = CD.conferir(self.so_aaa(acao='comprar'), self.EV)
+        self.assertEqual(e, [])
+        self.assertTrue(any('independencia_evidencias' in x for x in a))
+
+    def test_independencia_valida_passa(self):
+        ind = {'fontes_independentes': 1, 'grupos_mesma_origem': [['AAA3.upside_ajustado_pct']], 'observacao': 'mesmo balanço'}
+        e, a = CD.conferir(self.so_aaa(acao='comprar', independencia_evidencias=ind), self.EV)
+        self.assertEqual((e, a), ([], []))
+
+    def test_independencia_incoerente_e_erro(self):
+        e, _ = CD.conferir(self.so_aaa(independencia_evidencias={'fontes_independentes': 5}), self.EV)
+        self.assertTrue(any('fontes independentes declaradas' in x for x in e))
+        e, _ = CD.conferir(self.so_aaa(independencia_evidencias={'fontes_independentes': 1, 'grupos_mesma_origem': [['AAA3.outro']]}), self.EV)
+        self.assertTrue(any('grupos_mesma_origem' in x for x in e))
+        e, _ = CD.conferir(self.so_aaa(independencia_evidencias={'fontes_independentes': -1}), self.EV)
+        self.assertTrue(any(x.startswith('schema') for x in e))
+        e, _ = CD.conferir(self.so_aaa(independencia_evidencias={'observacao': 'sem número'}), self.EV)
+        self.assertTrue(any(x.startswith('schema') for x in e))
+
+    def test_confianca_alta_exige_duas_fontes_independentes(self):
+        ev = {**self.EV, 'por_ticker': {**self.EV['por_ticker'], 'AAA3': {'confianca_dados': 'alta', 'dados_ausentes': []}}}
+        d = self.so_aaa(confianca='alta', dados_ausentes=[], independencia_evidencias={'fontes_independentes': 1})
+        e, _ = CD.conferir(d, ev)
+        self.assertTrue(any('fonte(s) independente(s)' in x for x in e))
+        d = self.so_aaa(confianca='alta', dados_ausentes=[], evidencias_ids=['AAA3.upside_ajustado_pct', 'AAA3.cvm_p_l'],
+                        independencia_evidencias={'fontes_independentes': 2})
+        e, _ = CD.conferir(d, ev)
+        self.assertEqual(e, [])
+
     def test_numero_inventado_vira_aviso(self):
         _, a = CD.conferir(self.dec(tese='Upside ajustado de -2,0% e P/L de 14,7x.'), self.EV)
         self.assertEqual(len(a), 1)              # -2,0 bate com o fato; 14,7 não

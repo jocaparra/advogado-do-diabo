@@ -18,6 +18,7 @@ import os
 import statistics
 import sys
 
+import calibracao as K
 import carteira as C
 
 HORIZONTES = {'1_semana': 7, '4_semanas': 28, '12_semanas': 84}
@@ -288,6 +289,7 @@ def agregar(obs_h):
             'acerto_direcional_pct': (round(sum(o['veredito'] == 'acerto' for o in direcionais) / len(direcionais) * 100, 1)
                                       if direcionais else None),
             'spearman_por_componente': rho_comp, 'amostra': 'suficiente' if suficiente else 'insuficiente',
+            'calibracao_certeza': K.por_grupo(obs_h, 'certeza', MIN_OBS, MIN_SEMANAS),
             'geral': _resumo(obs_h), 'por_acao': por('acao'), 'por_certeza': por('certeza'), 'por_posicao': ranking,
             'spearman_nota_excesso_medio': round(statistics.fmean(rhos), 3) if rhos else None, 'semanas_com_spearman': len(rhos),
             'spread_comprar_menos_evitar_pp': (round(comprar['excesso_medio_pp'] - evitar['excesso_medio_pp'], 2)
@@ -302,7 +304,7 @@ def _versao_codigo():
         h = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], cwd=aqui, capture_output=True, text=True, timeout=5)
         if h.returncode != 0:
             return None
-        sujo = subprocess.run(['git', 'status', '--porcelain', '--', 'src'], cwd=aqui, capture_output=True, text=True, timeout=5)
+        sujo = subprocess.run(['git', 'status', '--porcelain', '--', '.'], cwd=aqui, capture_output=True, text=True, timeout=5)
         return h.stdout.strip() + ('+' if sujo.stdout.strip() else '')
     except (OSError, subprocess.SubprocessError):
         return None

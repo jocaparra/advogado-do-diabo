@@ -4,7 +4,9 @@ uso: python src/conferir_decisao.py <pasta_da_semana>
 
 Erros (saída 1): schema inválido; papel fora de evidencias.json; id de evidência inexistente; confiança "alta"
 quando a confiança dos dados do papel não é alta; "comprar" sem argumento contrário ou sem invalidador; papel
-do ranking sem decisão. Avisos: número escrito em texto que não bate com nenhum fato citado (o modelo não deve
+do ranking sem decisão; `independencia_evidencias` (opcional) incoerente: confiança "alta" com menos de 2 fontes
+independentes, mais fontes independentes do que evidências citadas ou grupo de mesma origem com id não citado.
+Avisos: "comprar" sem `independencia_evidencias` (várias matérias do mesmo fato não são evidências independentes); número escrito em texto que não bate com nenhum fato citado (o modelo não deve
 inventar nem recalcular números: deve citar o id). Grava conferencia_decisao.json.
 """
 import json
@@ -52,6 +54,18 @@ def conferir(decisao, evid):
             erros.append(f"{t}: confiança 'alta' com dados de confiança '{papeis[t]['confianca_dados']}'")
         if d['acao'] == 'comprar' and papeis[t]['dados_ausentes'] and d['confianca'] != 'baixa' and not d['dados_ausentes']:
             erros.append(f'{t}: comprar com dados ausentes no consolidado e sem declará-los em dados_ausentes')
+        ind = d.get('independencia_evidencias')
+        if ind is not None:
+            fi = ind['fontes_independentes']
+            if d['confianca'] == 'alta' and fi < 2:
+                erros.append(f"{t}: confiança 'alta' com {fi} fonte(s) independente(s) (mínimo 2)")
+            if fi > len(d['evidencias_ids']):
+                erros.append(f"{t}: {fi} fontes independentes declaradas para {len(d['evidencias_ids'])} evidência(s) citada(s)")
+            fora = [i for g in ind.get('grupos_mesma_origem', []) for i in g if i not in d['evidencias_ids']]
+            if fora:
+                erros.append(f'{t}: grupos_mesma_origem cita ids que não estão em evidencias_ids: {fora}')
+        elif d['acao'] == 'comprar':
+            avisos.append(f'{t}: "comprar" sem independencia_evidencias (declare quantas fontes são independentes)')
         citados = [fatos[i] for i in d['evidencias_ids'] if i in fatos and isinstance(fatos[i], (int, float))]
         textos = [d['tese']] + d['argumentos_contrarios'] + d['invalidadores']
         for tx in textos:

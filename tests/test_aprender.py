@@ -296,3 +296,72 @@ class TesteLimitesDosCandidatos(unittest.TestCase):
             for c in L.COMPONENTES:
                 self.assertLessEqual(abs(cand[c] - PESOS[c]), L.MAX_DELTA + 1e-3, (sinal, c))
                 self.assertGreaterEqual(cand[c], L.PISO_PESO - 1e-9)
+
+
+class TesteIntegridadeDasVersoes(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.arq = os.path.join(self.tmp.name, 'parametros.json')
+        self.obs = obs_sinteticas(10, 6)
+        L._salvar({'versao_atual': 1, 'versoes': [{'versao': 1, 'criado_em': 'x', 'parametros': {'pesos': PESOS}, 'motivo': 'baseline',
+                                                   'aprovado_por': 'baseline', 'evidencia': None, 'aplicada_a_partir_de': None}]}, self.arq)
+        self.p = L.propor(self.obs, PESOS, hoje=dt.date(2026, 4, 1))
+
+    def _editar(self, fn):
+        d = L.carregar_versoes(self.arq)
+        fn(d)
+        L._salvar(d, self.arq)
+
+    def test_arquivo_legado_sem_hash_e_valido(self):
+        r = L.verificar_integridade(L.carregar_versoes(self.arq))
+        self.assertTrue(r['ok'])
+        self.assertEqual((r['verificadas'], r['sem_hash']), (0, [1]))
+
+    def test_versoes_novas_ganham_hash_e_passam(self):
+        L.aplicar(self.p, self.obs, 'usuario', hoje=dt.date(2026, 4, 1), arquivo=self.arq)
+        L.reverter(1, arquivo=self.arq)
+        d = L.carregar_versoes(self.arq)
+        self.assertTrue(all('hash' in v for v in d['versoes'][1:]))
+        r = L.verificar_integridade(d)
+        self.assertTrue(r['ok'])
+        self.assertEqual(r['verificadas'], 2)
+
+    def test_editar_a_baseline_sem_hash_quebra_o_hash_da_seguinte(self):
+        L.aplicar(self.p, self.obs, 'usuario', hoje=dt.date(2026, 4, 1), arquivo=self.arq)
+        self._editar(lambda d: d['versoes'][0]['parametros']['pesos'].update(momentum=0.9))
+        self.assertEqual(L.verificar_integridade(L.carregar_versoes(self.arq))['alteradas'], [2])
+
+    def test_editar_pesos_de_versao_com_hash_e_detectado(self):
+        L.aplicar(self.p, self.obs, 'usuario', hoje=dt.date(2026, 4, 1), arquivo=self.arq)
+        self._editar(lambda d: d['versoes'][1]['parametros']['pesos'].update(noticias=0.5))
+        r = L.verificar_integridade(L.carregar_versoes(self.arq))
+        self.assertFalse(r['ok'])
+        self.assertEqual(r['alteradas'], [2])
+
+    def test_aplicar_e_reverter_recusam_arquivo_adulterado_sem_tocar_nele(self):
+        L.aplicar(self.p, self.obs, 'usuario', hoje=dt.date(2026, 4, 1), arquivo=self.arq)
+        self._editar(lambda d: d['versoes'][1]['parametros']['pesos'].update(noticias=0.5))
+        with open(self.arq, 'rb') as f:
+            antes = f.read()
+        with self.assertRaises(ValueError):
+            L.reverter(1, arquivo=self.arq)
+        nova = L.propor(self.obs, L.versao(L.carregar_versoes(self.arq))['parametros']['pesos'], hoje=dt.date(2026, 4, 2))
+        if nova['status'] == 'proposta':
+            with self.assertRaises(ValueError):
+                L.aplicar(nova, self.obs, 'usuario', arquivo=self.arq)
+        with open(self.arq, 'rb') as f:
+            self.assertEqual(f.read(), antes)
+
+    def test_versao_atual_inexistente_e_acusada(self):
+        self._editar(lambda d: d.update(versao_atual=7))
+        r = L.verificar_integridade(L.carregar_versoes(self.arq))
+        self.assertFalse(r['ok'])
+        self.assertFalse(r['versao_atual_existe'])
+
+    def test_evidencia_registra_independencia_das_observacoes(self):
+        n = L.aplicar(self.p, self.obs, 'usuario', hoje=dt.date(2026, 4, 1), arquivo=self.arq)
+        ind = n['evidencia']['independencia']
+        self.assertEqual(ind['semanas'], 10)
+        self.assertEqual(ind['observacoes'], 60)
+        self.assertEqual(ind['observacoes_por_semana'], 6.0)

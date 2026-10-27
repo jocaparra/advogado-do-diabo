@@ -32,6 +32,7 @@ python src/aprender.py propor <pasta_da_semana>      # só gera proposta se o po
 python src/aprender.py aplicar <pasta> --proposta ID --aprovado-por usuario
 python src/aprender.py verificar <pasta_da_semana>   # compara com a versão anterior, sugere rollback
 python src/aprender.py reverter --para 1
+python src/aprender.py integridade                   # versões de parâmetros alteradas à mão?
 python src/feedback.py add --semana 2026-10-05 --tipo correcao --ticker TOTS3 --texto "..."
 python src/memoria.py buscar --tag regime_eleicao
 ```
@@ -61,6 +62,12 @@ veredito mais estável.
 - `aplicar` revalida a proposta (pesos finitos somando 1, piso, ±5 pp por peso, ganho mínimo fora da amostra, id
   coerente com os pesos) porque o arquivo é editável à mão. `avaliacao.json` registra `excluidas` (linhas e
   janelas descartadas, por motivo) e `reproducao` (commit, banda neutra, horizontes, data de corte).
+- Cada versão de parâmetros carrega um hash encadeado ao conteúdo da anterior; `integridade` acusa edição manual e
+  `aplicar` e `reverter` recusam um arquivo adulterado. Arquivos antigos sem hash seguem válidos (a baseline é coberta
+  pelo hash da versão seguinte). Isso detecta alteração, não a impede.
+- A "certeza" é qualitativa. O `avaliacao.json` traz, por nível, a frequência observada de superar o Ibovespa e de
+  acerto direcional, com intervalo de Wilson e portão de amostra (`calibracao_certeza`). Nenhuma nota ou certeza é
+  convertida em probabilidade; Brier e log loss (`src/calibracao.py`) só entram quando houver probabilidades numéricas.
 - Só os pesos da nota são aprendidos. O desconto do rali e o corte de compra ainda não.
 - A memória e as propostas ficam em `aprendizado/` (local, fora do git). Os parâmetros versionados ficam em
   `dados/parametros_aprendidos.json`, criado só na primeira aplicação aprovada.
