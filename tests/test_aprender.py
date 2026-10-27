@@ -221,3 +221,78 @@ class TesteErrosRecorrentes(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TesteValidacaoDaProposta(unittest.TestCase):
+    """Auditoria: a proposta é um JSON editável; `aplicar` não pode confiar nele às cegas."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.arq = os.path.join(self.tmp.name, 'parametros.json')
+        self.obs = obs_sinteticas(10, 6)
+        self.dados = {'versao_atual': 1, 'versoes': [{'versao': 1, 'criado_em': 'x', 'parametros': {'pesos': PESOS}, 'motivo': 'baseline',
+                                                      'aprovado_por': 'baseline', 'evidencia': None, 'aplicada_a_partir_de': None}]}
+        L._salvar(self.dados, self.arq)
+        self.p = L.propor(self.obs, PESOS, hoje=dt.date(2026, 4, 1))
+        self.assertEqual(self.p['status'], 'proposta')
+
+    def _recusa(self, p):
+        def bytes_do_arquivo():
+            with open(self.arq, 'rb') as f:
+                return f.read()
+        antes = bytes_do_arquivo()
+        with self.assertRaises(ValueError):
+            L.aplicar(p, self.obs, 'usuario', arquivo=self.arq)
+        self.assertEqual(bytes_do_arquivo(), antes)   # recusa não toca no arquivo de versões
+
+    def test_proposta_legitima_passa(self):
+        L.validar_proposta(self.p)
+
+    def test_pesos_editados_a_mao_sao_recusados(self):
+        p = dict(self.p, pesos_propostos=dict(self.p['pesos_propostos'], momentum=0.60))
+        self._recusa(p)
+
+    def test_mudanca_acima_do_limite_e_recusada_mesmo_com_id_coerente(self):
+        import hashlib
+        import json
+        novos = dict(PESOS, momentum=0.40, noticias=0.0)
+        p = dict(self.p, pesos_propostos=novos, id='p20260401_' + hashlib.sha256(json.dumps(novos, sort_keys=True).encode()).hexdigest()[:8])
+        self._recusa(p)
+
+    def test_pesos_que_nao_somam_um_ou_nao_finitos_sao_recusados(self):
+        self._recusa(dict(self.p, pesos_propostos={c: 0.3 for c in L.COMPONENTES}))
+        self._recusa(dict(self.p, pesos_propostos=dict(self.p['pesos_propostos'], momentum=float('nan'))))
+        self._recusa(dict(self.p, pesos_propostos={'momentum': 1.0}))
+
+    def test_ganho_inflado_ou_ausente_e_recusado(self):
+        self._recusa(dict(self.p, validacao=dict(self.p['validacao'], ganho=0.0)))
+        self._recusa({k: v for k, v in self.p.items() if k != 'validacao'})
+
+    def test_id_adulterado_e_recusado(self):
+        self._recusa(dict(self.p, id='p20260401_deadbeef'))
+
+    def test_proposta_que_nao_e_dict_ou_sem_ganho_e_recusada(self):
+        for ruim in (None, [], 'x', {'status': 'sem_ganho'}):
+            with self.assertRaises(ValueError):
+                L.validar_proposta(ruim)
+
+    def test_aplicacao_recusada_nao_corrompe_e_rollback_restaura_exatamente(self):
+        self._recusa(dict(self.p, id='p20260401_deadbeef'))
+        L.aplicar(self.p, self.obs, 'usuario', hoje=dt.date(2026, 4, 1), arquivo=self.arq)
+        L.reverter(1, arquivo=self.arq)
+        d = L.carregar_versoes(self.arq)
+        self.assertEqual(L.versao(d)['parametros'], d['versoes'][0]['parametros'])
+        self.assertEqual([v['versao'] for v in d['versoes']], [1, 2, 3])     # nada apagado
+        self.assertEqual(d['versoes'][1]['parametros']['pesos'], self.p['pesos_propostos'])
+        self.assertEqual(d['versao_atual'], 3)
+
+
+class TesteLimitesDosCandidatos(unittest.TestCase):
+    def test_nenhum_peso_passa_do_delta_maximo_e_a_soma_fecha(self):
+        for sinal in L.COMPONENTES:
+            cand, _ = L.candidatos(obs_sinteticas(10, 6, sinal=sinal), PESOS)
+            self.assertAlmostEqual(sum(cand.values()), 1.0, delta=1e-3)
+            for c in L.COMPONENTES:
+                self.assertLessEqual(abs(cand[c] - PESOS[c]), L.MAX_DELTA + 1e-3, (sinal, c))
+                self.assertGreaterEqual(cand[c], L.PISO_PESO - 1e-9)

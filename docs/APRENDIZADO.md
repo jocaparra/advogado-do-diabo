@@ -56,6 +56,11 @@ veredito mais estável.
 - O retorno é total (preço mais dividendos e JCP por data ex, sem reinvestimento), comparável ao Ibovespa de
   retorno total. Observação sem proventos conhecidos até o fim da janela fica só com preço e marca a avaliação
   como incompleta (`aviso_proventos`). Parte dos proventos vem de fonte única (Yahoo), sem conferência.
+- Os mínimos de amostra (30 observações em 8 semanas; 200 em 52) são convenções operacionais, não garantia de
+  suficiência estatística. Passar do portão só autoriza *propor*; a aplicação continua exigindo sua aprovação.
+- `aplicar` revalida a proposta (pesos finitos somando 1, piso, ±5 pp por peso, ganho mínimo fora da amostra, id
+  coerente com os pesos) porque o arquivo é editável à mão. `avaliacao.json` registra `excluidas` (linhas e
+  janelas descartadas, por motivo) e `reproducao` (commit, banda neutra, horizontes, data de corte).
 - Só os pesos da nota são aprendidos. O desconto do rali e o corte de compra ainda não.
 - A memória e as propostas ficam em `aprendizado/` (local, fora do git). Os parâmetros versionados ficam em
   `dados/parametros_aprendidos.json`, criado só na primeira aplicação aprovada.

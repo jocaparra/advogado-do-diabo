@@ -201,3 +201,86 @@ class TesteAcertoERoteamento(unittest.TestCase):
             self.assertFalse(r['avaliacao_incompleta'])
             ob = {o['ticker']: o for o in r['observacoes']['4_semanas']}
             self.assertGreater(ob['AAA3']['proventos_pct'], 0)
+
+
+class TesteIntegridadeDaAvaliacao(unittest.TestCase):
+    """Regressões da auditoria de assertividade: fronteiras, proventos, exclusões e reprodutibilidade."""
+
+    def cenario(self, divs=None, ranking=None):
+        ibov = {d: v for d, v in serie('2026-01-01', 200, 100000, 0.0)}   # benchmark parado
+        acao = {d: v for d, v in serie('2026-01-01', 200, 10, 0.0)}      # ação parada: todo retorno vem de proventos
+        sem = {'data': '2026-02-01', 'ranking': ranking or [
+            {'posicao': 1, 'ticker': 'AAA3', 'nota': 7, 'acao_sugerida': 'comprar', 'certeza': 'alta',
+             'preco_atual': 10.0, 'data_cotacao': '2026-02-01'}]}
+        return sem, {'AAA3': acao, '^BVSP': ibov}, divs
+
+    def test_banda_neutra_inclui_a_fronteira(self):
+        b = A.BANDA_NEUTRA_PP['4_semanas']
+        self.assertEqual(A.veredito('neutra', b, b), 'neutro_confirmado')
+        self.assertEqual(A.veredito('neutra', -b, b), 'neutro_confirmado')
+        self.assertEqual(A.veredito('neutra', b + 0.01, b), 'oportunidade_perdida')
+        self.assertEqual(A.veredito('neutra', -b - 0.01, b), 'queda_evitada')
+
+    def test_excesso_zero_nao_e_acerto_direcional(self):
+        self.assertEqual(A.veredito('acima', 0.0, 6), 'erro')
+        self.assertEqual(A.veredito('abaixo', 0.0, 6), 'erro')
+
+    def test_excesso_invalido_ou_direcao_desconhecida_e_inconclusivo(self):
+        self.assertEqual(A.veredito('acima', float('nan'), 6), 'inconclusivo')
+        self.assertEqual(A.veredito('acima', None, 6), 'inconclusivo')
+        self.assertEqual(A.veredito(None, 5.0, 6), 'inconclusivo')
+
+    def test_neutro_e_oportunidade_perdida_nao_entram_no_acerto_direcional(self):
+        def o(v):
+            return {'semana': 's', 'ticker': 'X', 'posicao': 1, 'nota': 5, 'acao': 'x', 'certeza': 'alta', 'retorno_pct': 0,
+                    'proventos_pct': 0, 'ibovespa_pct': 0, 'excesso_pp': 0, 'veredito': v, 'componentes': None}
+        ag = A.agregar([o('acerto'), o('erro'), o('neutro_confirmado'), o('neutro_confirmado'), o('oportunidade_perdida'),
+                        o('queda_evitada')])
+        self.assertEqual(ag['acerto_direcional_pct'], 50.0)   # 1 acerto em 2 direcionais; os 4 neutros ficam de fora
+
+    def test_provento_na_data_ex_do_inicio_nao_conta_e_no_fim_conta(self):
+        divs = {'AAA3': {'2026-02-01': 1.0, '2026-03-01': 0.5}}   # +28 dias de 2026-02-01 = 2026-03-01
+        sem, series, _ = self.cenario(divs)
+        obs, _ = A.avaliar_entradas([sem], series, dt.date(2026, 7, 1), divs)
+        o = obs['4_semanas'][0]
+        self.assertAlmostEqual(o['retorno_pct'], 5.0, places=2)    # só os 0,5 de 2026-03-01
+        self.assertAlmostEqual(o['proventos_pct'], 5.0, places=2)
+
+    def test_retorno_total_difere_do_de_preco_quando_ha_proventos(self):
+        sem, series, _ = self.cenario()
+        sem_prov, _ = A.avaliar_entradas([sem], series, dt.date(2026, 7, 1), {})
+        com_prov, _ = A.avaliar_entradas([sem], series, dt.date(2026, 7, 1), {'AAA3': {'2026-02-10': 1.0}})
+        self.assertAlmostEqual(sem_prov['4_semanas'][0]['retorno_pct'], 0.0, places=2)
+        self.assertAlmostEqual(com_prov['4_semanas'][0]['retorno_pct'], 10.0, places=2)
+
+    def test_exclusoes_sao_contadas_por_motivo(self):
+        ranking = [
+            {'posicao': 1, 'ticker': 'AAA3', 'nota': 7, 'acao_sugerida': 'comprar', 'preco_atual': 10.0, 'data_cotacao': '2026-02-01'},
+            {'posicao': 2, 'ticker': 'SEM3', 'nota': 5, 'acao_sugerida': 'comprar', 'preco_atual': 10.0, 'data_cotacao': '2026-02-01'},
+            {'posicao': 3, 'ticker': 'AAA3', 'nota': 5, 'acao_sugerida': 'comprar', 'preco_atual': 10.0, 'data_cotacao': 'ontem'},
+            {'ticker': 'AAA3'}]
+        sem, series, _ = self.cenario(ranking=ranking)
+        exc = {}
+        obs, _ = A.avaliar_entradas([sem], series, dt.date(2026, 7, 1), exclusoes=exc)
+        self.assertEqual(len(obs['4_semanas']), 1)
+        self.assertEqual(exc, {'sem_serie': 1, 'sem_data': 1, 'linha_malformada': 1})
+
+    def test_benchmark_ausente_nao_gera_observacao(self):
+        sem, series, _ = self.cenario()
+        series['^BVSP'] = {}
+        exc = {}
+        obs, _ = A.avaliar_entradas([sem], series, dt.date(2026, 7, 1), exclusoes=exc)
+        self.assertEqual(sum(len(v) for v in obs.values()), 0)
+        self.assertEqual(exc.get('sem_preco_inicial'), 1)
+
+    def test_reexecucao_com_os_mesmos_dados_e_identica_e_registra_reproducao(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            TesteAvaliacao().monta(tmp)
+            a = A.avaliar(tmp, hoje=dt.date(2026, 7, 1))
+            b = A.avaliar(tmp, hoje=dt.date(2026, 7, 1))
+            self.assertEqual(a, b)
+            rep = a['reproducao']
+            self.assertFalse(rep['reinvestimento_proventos'])
+            self.assertEqual(rep['banda_neutra_pp'], A.BANDA_NEUTRA_PP)
+            self.assertEqual(rep['corte'], '2026-07-01')
+            self.assertIn('excluidas', a)

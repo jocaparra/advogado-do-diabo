@@ -175,9 +175,27 @@ def candidatos(obs_treino, atuais):
         r, n = spearman_medio(obs_treino, lambda o, c=c: o['componentes'][c])
         rho[c] = r if r is not None else 0.0
     bruto = _normalizar({c: max(atuais[c] * (1 + K * rho[c]), PISO_PESO) for c in COMPONENTES})
-    lim = {c: min(max(bruto[c], atuais[c] - MAX_DELTA), atuais[c] + MAX_DELTA) for c in COMPONENTES}
-    lim = {c: max(v, PISO_PESO) for c, v in lim.items()}
-    return {c: round(v, 4) for c, v in _normalizar(lim).items()}, rho
+    return {c: round(v, 4) for c, v in _projetar(bruto, atuais).items()}, rho
+
+
+def _projetar(bruto, atuais):
+    """Pesos dentro de [max(atual - MAX_DELTA, PISO), atual + MAX_DELTA] somando 1.
+
+    Renormalizar depois de cortar empurrava um peso além de MAX_DELTA (ex.: +5,7 pp); aqui a sobra é repartida só
+    entre os pesos que ainda têm folga, até a soma fechar."""
+    lo = {c: max(atuais[c] - MAX_DELTA, PISO_PESO) for c in COMPONENTES}
+    hi = {c: atuais[c] + MAX_DELTA for c in COMPONENTES}
+    w = {c: min(max(bruto[c], lo[c]), hi[c]) for c in COMPONENTES}
+    for _ in range(50):
+        resto = 1.0 - sum(w.values())
+        if abs(resto) < 1e-12:
+            break
+        livres = [c for c in COMPONENTES if (resto > 0 and w[c] < hi[c] - 1e-12) or (resto < 0 and w[c] > lo[c] + 1e-12)]
+        if not livres:
+            break
+        for c in livres:
+            w[c] = min(max(w[c] + resto / len(livres), lo[c]), hi[c])
+    return w
 
 
 def propor(obs, atuais, hoje=None):
@@ -244,13 +262,39 @@ def versao(dados, n=None):
     raise ValueError(f'versão inexistente: {n}')
 
 
+def validar_proposta(proposta):
+    """Levanta ValueError se a proposta (um JSON editável à mão) violar os limites que `propor` garante.
+
+    Confere estrutura, pesos finitos somando 1, piso, delta máximo por peso, ganho mínimo fora da amostra e o id
+    (hash dos pesos propostos). Não reprova só porque chegaram semanas novas: isso é tratado pela versão-base."""
+    if not isinstance(proposta, dict) or proposta.get('status') != 'proposta':
+        raise ValueError(f'proposta não aplicável (status: {proposta.get("status") if isinstance(proposta, dict) else None})')
+    atuais, novos = proposta.get('pesos_atuais'), proposta.get('pesos_propostos')
+    for nome, p in (('pesos_atuais', atuais), ('pesos_propostos', novos)):
+        if not isinstance(p, dict) or set(p) != set(COMPONENTES) or not all(A._num(v) for v in p.values()):
+            raise ValueError(f'proposta inválida: {nome} precisa ter exatamente {", ".join(COMPONENTES)} com números finitos')
+    if abs(sum(novos.values()) - 1) > 1e-3:
+        raise ValueError('proposta inválida: pesos propostos não somam 1')
+    for c in COMPONENTES:
+        if novos[c] < PISO_PESO - 1e-9:
+            raise ValueError(f'proposta inválida: peso de {c} abaixo do piso {PISO_PESO}')
+        if abs(novos[c] - atuais[c]) > MAX_DELTA + 1e-3:
+            raise ValueError(f'proposta inválida: mudança em {c} acima de {MAX_DELTA}')
+    val = proposta.get('validacao')
+    if not isinstance(val, dict) or not A._num(val.get('ganho')) or val['ganho'] < MARGEM_TESTE - 1e-9:
+        raise ValueError('proposta inválida: sem ganho fora da amostra igual ou acima da margem exigida')
+    esperado = hashlib.sha256(json.dumps(novos, sort_keys=True).encode()).hexdigest()[:8]
+    if not str(proposta.get('id', '')).endswith('_' + esperado):
+        raise ValueError('proposta inválida: o id não corresponde aos pesos propostos (arquivo alterado?)')
+
+
 def aplicar(proposta, obs, aprovado_por, hoje=None, arquivo=None):
-    """Nova versão a partir de uma proposta. Recusa sem aprovação do usuário, com portão fechado ou proposta sem ganho."""
+    """Nova versão a partir de uma proposta. Recusa sem aprovação do usuário, com portão fechado, proposta sem ganho
+    ou proposta fora dos limites de `propor`."""
     hoje = hoje or dt.date.today()
     if aprovado_por != 'usuario':
         raise ValueError('aplicar exige aprovação explícita do usuário (--aprovado-por usuario)')
-    if proposta.get('status') != 'proposta':
-        raise ValueError(f'proposta não aplicável (status: {proposta.get("status")})')
+    validar_proposta(proposta)
     if not portao(obs)['aberto']:
         raise ValueError('portão de amostra fechado nesta data; a evidência da proposta não se sustenta')
     dados = carregar_versoes(arquivo)

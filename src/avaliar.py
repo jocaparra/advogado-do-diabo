@@ -160,12 +160,20 @@ def veredito(direcao, excesso_pp, banda):
     return 'inconclusivo'
 
 
-def avaliar_entradas(semanas, series, hoje, dividendos=None, cobertura=None):
+def avaliar_entradas(semanas, series, hoje, dividendos=None, cobertura=None, exclusoes=None):
     """Lista de observações vencidas e contagem de pendentes, por horizonte.
 
     `cobertura` (ticker -> (ate, ate_verificado), de carregar_proventos) diz até quando os proventos do ticker são
     conhecidos: uma observação cujo fim da janela passa dessa data fica com `proventos_completos=False` (retorno
-    só de preço, não comparável ao Ibovespa de retorno total). Sem `cobertura`, assume-se completo."""
+    só de preço, não comparável ao Ibovespa de retorno total). Sem `cobertura`, assume-se completo.
+
+    `exclusoes` (dict opcional, preenchido no lugar) conta as linhas e janelas descartadas por motivo, para que nada
+    saia da avaliação em silêncio: 'linha_malformada', 'sem_data', 'sem_serie', 'sem_preco_inicial' e, por horizonte,
+    'sem_preco_final'."""
+    def excluir(motivo):
+        if exclusoes is not None:
+            exclusoes[motivo] = exclusoes.get(motivo, 0) + 1
+
     obs = {h: [] for h in HORIZONTES}
     pend = {h: 0 for h in HORIZONTES}
     ibov = series.get('^BVSP', {})
@@ -175,16 +183,18 @@ def avaliar_entradas(semanas, series, hoje, dividendos=None, cobertura=None):
             continue
         for r in sem['ranking']:
             # uma linha malformada no histórico não pode derrubar a avaliação inteira
-            if not isinstance(r, dict) or not isinstance(r.get('ticker'), str) or not isinstance(r.get('acao_sugerida'), str):
-                continue
-            if not all(_num(r.get(k)) for k in ('posicao', 'nota')):
+            if (not isinstance(r, dict) or not isinstance(r.get('ticker'), str) or not isinstance(r.get('acao_sugerida'), str)
+                    or not all(_num(r.get(k)) for k in ('posicao', 'nota'))):
+                excluir('linha_malformada')
                 continue
             try:
                 d0 = dt.date.fromisoformat(r.get('data_cotacao') or sem.get('data'))
             except (ValueError, TypeError):
+                excluir('sem_data')
                 continue
             s = series.get(r['ticker'])
             if s is None or not r.get('preco_atual'):
+                excluir('sem_serie')
                 continue
             # preço inicial na MESMA base da série mais recente (ajustada por desdobramentos);
             # o preço gravado no histórico é o nominal da época e quebraria o retorno após um split
@@ -193,6 +203,7 @@ def avaliar_entradas(semanas, series, hoje, dividendos=None, cobertura=None):
                 p0 = r['preco_atual']
             _, b0 = fechamento(ibov, d0)
             if not (_preco_ok(p0) and _preco_ok(b0)):
+                excluir('sem_preco_inicial')
                 continue
             for h, dias in HORIZONTES.items():
                 alvo = d0 + dt.timedelta(days=dias)
@@ -202,6 +213,7 @@ def avaliar_entradas(semanas, series, hoje, dividendos=None, cobertura=None):
                 d1, p1 = fechamento(s, alvo)
                 _, b1 = fechamento(ibov, alvo)
                 if not (_preco_ok(p1) and _preco_ok(b1)):
+                    excluir(f'sem_preco_final_{h}')
                     continue
                 prov = proventos(dividendos, r['ticker'], d0, d1)
                 if cobertura is None:
@@ -282,6 +294,20 @@ def agregar(obs_h):
                                                if comprar.get('n') and evitar.get('n') else None)}
 
 
+def _versao_codigo():
+    """Commit do git (com '+' se houver alteração local não commitada) ou None fora de um repositório."""
+    import subprocess
+    aqui = os.path.dirname(os.path.abspath(__file__))
+    try:
+        h = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], cwd=aqui, capture_output=True, text=True, timeout=5)
+        if h.returncode != 0:
+            return None
+        sujo = subprocess.run(['git', 'status', '--porcelain', '--', 'src'], cwd=aqui, capture_output=True, text=True, timeout=5)
+        return h.stdout.strip() + ('+' if sujo.stdout.strip() else '')
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def avaliar(raiz, hoje=None):
     hoje = hoje or dt.date.today()
     h = os.path.join(raiz, 'historico_carteira.json')
@@ -290,8 +316,12 @@ def avaliar(raiz, hoje=None):
     hist = C.ler(h)
     series = carregar_series(raiz)
     divs, cobertura = carregar_proventos(raiz)
-    obs, pend = avaliar_entradas(hist['semanas'], series, hoje, divs, cobertura)
+    exclusoes = {}
+    obs, pend = avaliar_entradas(hist['semanas'], series, hoje, divs, cobertura, exclusoes)
     saida = {'data_avaliacao': hoje.isoformat(), 'semanas_no_historico': len(hist['semanas']),
+             'reproducao': {'codigo': _versao_codigo(), 'banda_neutra_pp': BANDA_NEUTRA_PP, 'horizontes_dias': HORIZONTES,
+                            'reinvestimento_proventos': False, 'janela_preco_dias': JANELA_PRECO, 'corte': hoje.isoformat()},
+             'excluidas': exclusoes,
              'metodo': 'retorno total do ticker (preço mais dividendos e JCP com data ex no período, sem reinvestimento) contra o '
                        'Ibovespa (índice de retorno total), da data da cotação da recomendação até +7, +28 e +84 dias; '
                        'observações sem cobertura de proventos até o fim da janela ficam só com retorno de preço e são contadas em '
