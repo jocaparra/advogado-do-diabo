@@ -53,7 +53,9 @@ veredito mais estável.
 
 - Os 14 papéis de uma semana compartilham fatores (juros, câmbio, eleição): 14 observações valem bem menos
   que 14 amostras independentes.
-- O retorno é de preço, sem dividendos; o Ibovespa é de retorno total.
+- O retorno é total (preço mais dividendos e JCP por data ex, sem reinvestimento), comparável ao Ibovespa de
+  retorno total. Observação sem proventos conhecidos até o fim da janela fica só com preço e marca a avaliação
+  como incompleta (`aviso_proventos`). Parte dos proventos vem de fonte única (Yahoo), sem conferência.
 - Só os pesos da nota são aprendidos. O desconto do rali e o corte de compra ainda não.
 - A memória e as propostas ficam em `aprendizado/` (local, fora do git). Os parâmetros versionados ficam em
   `dados/parametros_aprendidos.json`, criado só na primeira aplicação aprovada.
